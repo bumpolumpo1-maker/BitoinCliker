@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BitPulse — Endlos-Bitcoin-Clicker</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23f59e0b'/%3E%3Ccircle cx='32' cy='32' r='25' fill='%23fbbf24' stroke='%23b45309' stroke-width='2'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial,sans-serif' font-weight='bold' font-size='34' fill='%2378350f'%3E%E2%82%BF%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg-deep: #050811;
+      --bg-panel: rgba(13, 20, 38, 0.64);
+      --bg-card: rgba(20, 30, 54, 0.68);
+      --bg-card-hover: rgba(30, 44, 78, 0.82);
+      --border-glass: rgba(255, 255, 255, 0.09);
+      --border-gold: rgba(245, 158, 11, 0.35);
+      --gold-100: #fef3c7; --gold-300: #fcd34d; --gold-400: #fbbf24; --gold-500: #f59e0b; --gold-600: #d97706;
+      --cyan-400: #22d3ee; --emerald-400: #34d399; --purple-400: #c084fc; --rose-400: #fb7185; --sky-400: #38bdf8;
+      --text-main: #f1f5f9; --text-muted: #94a3b8; --text-dim: #64748b;
+      --shadow-glass: 0 14px 42px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-deep); color: var(--text-main);
+      overflow-x: hidden; user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: -2;
+      background:
+        radial-gradient(ellipse 65% 50% at 50% 0%, rgba(245, 158, 11, 0.14), transparent 70%),
+        radial-gradient(ellipse 50% 45% at 10% 90%, rgba(34, 211, 238, 0.08), transparent 70%),
+        radial-gradient(ellipse 50% 45% at 90% 85%, rgba(168, 85, 247, 0.09), transparent 70%),
+        linear-gradient(180deg, #050811 0%, #090f20 100%);
+    }
+    body::after {
+      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 44px 44px; mask-image: radial-gradient(circle at 50% 40%, black 35%, transparent 90%);
+    }
+    .tabular { font-variant-numeric: tabular-nums; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(251, 191, 36, 0.45); }
+
+    /* Panic Button & Overlay */
+    #panic-btn {
+      position: fixed; top: 8px; left: 8px; z-index: 9999; width: 34px; height: 34px;
+      border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(10px);
+      color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    #panic-btn:hover { color: var(--gold-300); border-color: var(--border-gold); background: rgba(30, 41, 59, 0.9); transform: scale(1.05); }
+    #panic-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 10000; display: none; background: #fff; overflow: hidden; }
+    #panic-overlay.active { display: block; }
+    #panic-img { width: 100vw; height: 100vh; display: block; object-fit: cover; pointer-events: none; }
+    #panic-exit-zone { position: fixed; top: 0; left: 0; width: 48px; height: 48px; z-index: 10002; opacity: 0; cursor: default; background: transparent; border: none; }
+
+    /* App Layout */
+    #app { display: flex; flex-direction: column; height: 100vh; max-width: 1720px; margin: 0 auto; padding: 10px 14px 14px; gap: 10px; }
+    #app.hidden-panic { display: none !important; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+      padding: 8px 14px 8px 48px; background: var(--bg-panel); backdrop-filter: blur(18px);
+      border: 1px solid var(--border-glass); border-radius: 18px; box-shadow: var(--shadow-glass);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--gold-300), var(--gold-600));
+      font-weight: 900; color: #451a03; box-shadow: 0 0 18px rgba(245, 158, 11, 0.45); font-size: 16px;
+    }
+    .brand-title { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; background: linear-gradient(90deg, #fff, var(--gold-300)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand-sub { font-size: 0.7rem; color: var(--text-dim); font-weight: 500; }
+    .top-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 10px;
+      border: 1px solid var(--border-glass); background: rgba(30, 41, 59, 0.65); color: var(--text-main);
+      font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.16s ease; white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) { background: rgba(51, 65, 85, 0.85); border-color: rgba(255, 255, 255, 0.22); transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-gold { background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(217, 119, 6, 0.18)); border-color: rgba(245, 158, 11, 0.45); color: var(--gold-300); }
+    .btn-gold:hover:not(:disabled) { background: linear-gradient(135deg, rgba(245, 158, 11, 0.38), rgba(217, 119, 6, 0.3)); border-color: var(--gold-400); }
+    .btn-purple { background: linear-gradient(135deg, rgba(168, 85, 247, 0.24), rgba(126, 34, 206, 0.18)); border-color: rgba(192, 132, 252, 0.42); color: #e9d5ff; }
+    .btn-cyan { background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(14, 116, 144, 0.18)); border-color: rgba(34, 211, 238, 0.42); color: #cffafe; }
+    .btn-emerald { background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(5, 150, 105, 0.2)); border-color: rgba(52, 211, 153, 0.45); color: #a7f3d0; }
+    .btn-danger { background: rgba(225, 29, 72, 0.18); border-color: rgba(251, 113, 133, 0.4); color: #fecdd3; }
+
+    .pill-badge { padding: 1px 6px; border-radius: 99px; font-size: 0.68rem; font-weight: 700; background: rgba(251, 191, 36, 0.22); color: var(--gold-300); }
+    .pill-badge.purple { background: rgba(192, 132, 252, 0.24); color: #e9d5ff; }
+    .pill-badge.cyan { background: rgba(34, 211, 238, 0.22); color: #a5f3fc; }
+
+    .mobile-tabs { display: none; gap: 6px; background: var(--bg-panel); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass); }
+    .mobile-tab { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; color: var(--text-muted); font-weight: 700; font-size: 0.8rem; cursor: pointer; }
+    .mobile-tab.active { background: rgba(245, 158, 11, 0.2); color: var(--gold-300); }
+
+    .dashboard { display: grid; grid-template-columns: minmax(290px, 1fr) minmax(355px, 1.15fr) minmax(310px, 1fr); gap: 12px; flex: 1; min-height: 0; }
+    .panel {
+      background: var(--bg-panel); backdrop-filter: blur(18px); border: 1px solid var(--border-glass);
+      border-radius: 18px; box-shadow: var(--shadow-glass); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
+    .panel-header {
+      padding: 11px 14px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center;
+      justify-content: space-between; gap: 8px; background: rgba(15, 23, 42, 0.4); flex-shrink: 0;
+    }
+    .panel-title { font-size: 0.92rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .panel-scroll { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 9px; }
+
+    .buy-toggle { display: inline-flex; background: rgba(5, 8, 17, 0.65); border: 1px solid var(--border-glass); border-radius: 9px; padding: 2px; gap: 2px; }
+    .buy-toggle button { border: none; background: transparent; color: var(--text-muted); font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 7px; cursor: pointer; }
+    .buy-toggle button.active { background: linear-gradient(135deg, var(--gold-500), var(--gold-600)); color: #1e1002; }
+
+    /* Center Arena */
+    .center-panel {
+      position: relative; align-items: center; justify-content: space-between; padding: 12px 16px; gap: 8px; overflow-y: auto;
+      background: radial-gradient(circle at 50% 45%, rgba(245, 158, 11, 0.12), transparent 65%), var(--bg-panel);
+    }
+    .stats-hero { width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2; }
+    .btc-amount {
+      font-size: clamp(1.7rem, 3vw, 2.65rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
+      background: linear-gradient(180deg, #ffffff 15%, var(--gold-300) 90%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .btc-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--gold-400); font-weight: 700; }
+    .substats-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-top: 4px; width: 100%; }
+    .stat-chip { background: rgba(15, 23, 42, 0.72); border: 1px solid var(--border-glass); border-radius: 10px; padding: 5px 10px; display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+    .stat-chip-label { font-size: 0.64rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-chip-val { font-size: 0.88rem; font-weight: 700; }
+    .stat-chip-val.gold { color: var(--gold-300); }
+    .stat-chip-val.cyan { color: var(--cyan-400); }
+    .stat-chip-val.emerald { color: var(--emerald-400); }
+    .mult-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; min-height: 20px; }
+    .mult-pill { font-size: 0.69rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: var(--text-muted); }
+    .mult-pill.frenzy { background: rgba(245, 158, 11, 0.25); border-color: var(--gold-400); color: var(--gold-100); animation: pulseGlow 1.1s infinite alternate; }
+    .mult-pill.rt { border-color: rgba(52, 211, 153, 0.35); color: var(--emerald-400); }
+    .mult-pill.crystal { border-color: rgba(192, 132, 252, 0.4); color: var(--purple-400); }
+    .mult-pill.genesis { border-color: rgba(34, 211, 238, 0.45); color: var(--cyan-400); }
+    .mult-pill.admin { border-color: rgba(251, 113, 133, 0.5); color: var(--rose-400); }
+    @keyframes pulseGlow { from { box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); } to { box-shadow: 0 0 18px rgba(251, 191, 36, 0.65); } }
+
+    /* Live Market Strip */
+    .market-strip {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: rgba(10, 16, 32, 0.72); border: 1px solid var(--border-glass); border-radius: 12px; padding: 6px 12px;
+    }
+    .market-info { display: flex; flex-direction: column; gap: 1px; font-size: 0.74rem; }
+    .market-price { font-weight: 800; font-size: 0.86rem; }
+    .market-up { color: var(--emerald-400); }
+    .market-down { color: var(--rose-400); }
+    .market-modes { display: flex; gap: 4px; }
+    .mode-btn { border: 1px solid var(--border-glass); background: rgba(255,255,255,0.04); color: var(--text-muted); font-size: 0.68rem; font-weight: 700; padding: 4px 7px; border-radius: 7px; cursor: pointer; }
+    .mode-btn.active { background: rgba(34, 211, 238, 0.2); border-color: rgba(34, 211, 238, 0.55); color: #a5f3fc; }
+
+    /* Coin Stage */
+    .coin-stage { position: relative; display: flex; align-items: center; justify-content: center; flex: 1; width: 100%; min-height: 195px; }
+    .coin-halo {
+      position: absolute; width: 240px; height: 240px; border-radius: 50%; pointer-events: none; filter: blur(8px);
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.28) 0%, rgba(245, 158, 11, 0.08) 45%, transparent 72%);
+      animation: haloBreath 3.6s ease-in-out infinite;
+    }
+    @keyframes haloBreath { 0%, 100% { transform: scale(0.96); opacity: 0.75; } 50% { transform: scale(1.06); opacity: 1; } }
+    #btc-button {
+      position: relative; width: 196px; height: 196px; border-radius: 50%; border: none; background: transparent;
+      cursor: pointer; padding: 0; outline: none; touch-action: manipulation;
+      transition: transform 0.08s cubic-bezier(0.22, 1, 0.36, 1), filter 0.15s ease;
+      filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.25));
+      animation: coinFloat 4.2s ease-in-out infinite;
+    }
+    #btc-button:hover { filter: drop-shadow(0 20px 38px rgba(0, 0, 0, 0.72)) drop-shadow(0 0 34px rgba(251, 191, 36, 0.42)); }
+    #btc-button.pressed { transform: scale(0.92) !important; animation-play-state: paused; }
+    @keyframes coinFloat { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-6px) rotate(1.2deg); } }
+    .coin-ripple { position: absolute; width: 192px; height: 192px; border-radius: 50%; border: 2px solid rgba(251, 191, 36, 0.7); pointer-events: none; animation: rippleOut 0.55s ease-out forwards; }
+    @keyframes rippleOut { from { transform: scale(0.95); opacity: 0.85; } to { transform: scale(1.48); opacity: 0; } }
+
+    /* Active Skills & Missions */
+    .skills-row { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .skill-btn {
+      position: relative; overflow: hidden; padding: 7px 8px; border-radius: 10px;
+      border: 1px solid rgba(245, 158, 11, 0.32); background: rgba(15, 23, 42, 0.78);
+      color: var(--text-main); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      font-size: 0.72rem; font-weight: 700; transition: all 0.15s;
+    }
+    .skill-btn:hover:not(:disabled) { border-color: var(--gold-400); background: rgba(30, 41, 59, 0.9); transform: translateY(-1px); }
+    .skill-btn.active-skill { border-color: var(--emerald-400); box-shadow: 0 0 12px rgba(52, 211, 153, 0.3); }
+    .skill-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .skill-sub { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
+
+    .arena-footer { width: 100%; display: flex; flex-direction: column; gap: 7px; z-index: 2; }
+    .combo-box { background: rgba(15, 23, 42, 0.72); border: 1px solid var(--border-glass); border-radius: 11px; padding: 8px 12px; }
+    .combo-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; }
+    .combo-mult-text { color: var(--gold-300); font-size: 0.85rem; }
+    .combo-track { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+    .combo-fill { height: 100%; width: 0%; border-radius: 99px; background: linear-gradient(90deg, #38bdf8, #fbbf24, #f97316, #ef4444); transition: width 0.08s linear; }
+
+    .mission-box {
+      background: rgba(15, 23, 42, 0.72); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 11px;
+      padding: 7px 11px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.74rem;
+    }
+    .automation-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; font-size: 0.74rem; color: var(--text-muted); }
+    .auto-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-glass); cursor: pointer; color: var(--text-muted); font-weight: 600; font-size: 0.72rem; }
+    .auto-pill.on { border-color: rgba(52, 211, 153, 0.5); color: var(--emerald-400); background: rgba(16, 185, 129, 0.14); }
+
+    /* Upgrade Cards */
+    .upg-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 11px; display: flex; flex-direction: column; gap: 7px; transition: border-color 0.18s, background 0.18s; }
+    .upg-card.can-afford { border-color: rgba(245, 158, 11, 0.36); }
+    .upg-card.can-afford:hover { background: var(--bg-card-hover); border-color: rgba(251, 191, 36, 0.6); }
+    .upg-card.done-card { border-color: rgba(52, 211, 153, 0.45); background: rgba(16, 185, 129, 0.08); }
+    .upg-ident { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .upg-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; }
+    .upg-icon.click-icon { background: rgba(34, 211, 238, 0.12); border-color: rgba(34, 211, 238, 0.25); }
+    .upg-name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .upg-name { font-weight: 700; font-size: 0.85rem; }
+    .upg-lvl { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: var(--gold-300); }
+    .upg-desc { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+    .upg-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .upg-output { font-size: 0.74rem; color: var(--emerald-400); font-weight: 600; }
+    .upg-buy-btn {
+      padding: 6px 11px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(30, 41, 59, 0.8); color: var(--text-muted); font-size: 0.74rem;
+      font-weight: 700; cursor: pointer; transition: all 0.15s; text-align: right; min-width: 108px;
+    }
+    .upg-buy-btn.ready { background: linear-gradient(135deg, var(--gold-500), var(--gold-600)); border-color: var(--gold-300); color: #1f1102; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25); }
+    .upg-buy-btn.ready:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .upg-buy-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+    .milestone-wrap { display: flex; align-items: center; gap: 8px; font-size: 0.66rem; color: var(--text-dim); }
+    .milestone-bar { flex: 1; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+    .milestone-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--gold-500), var(--emerald-400)); transition: width 0.2s ease; }
+
+    /* FX, Golden Coin, Toasts */
+    #fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 800; overflow: hidden; }
+    .float-num { position: absolute; font-weight: 800; font-size: 1.05rem; color: var(--gold-300); text-shadow: 0 2px 10px rgba(0,0,0,0.8); pointer-events: none; animation: floatUp 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards; white-space: nowrap; }
+    .float-num.crit { font-size: 1.35rem; color: #fb7185; text-shadow: 0 0 14px rgba(251, 113, 133, 0.75); }
+    @keyframes floatUp { 0% { transform: translate(-50%, -20%) scale(0.85); opacity: 1; } 100% { transform: translate(-50%, -115px) scale(1.08); opacity: 0; } }
+    .spark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-300); box-shadow: 0 0 8px var(--gold-400); pointer-events: none; animation: sparkFly 0.62s ease-out forwards; }
+    @keyframes sparkFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+    .golden-btc {
+      position: fixed; z-index: 750; width: 68px; height: 68px; border-radius: 50%; border: 2px solid #fef08a;
+      background: radial-gradient(circle at 30% 30%, #fef9c3, #fbbf24 55%, #b45309 100%);
+      box-shadow: 0 0 28px rgba(251, 191, 36, 0.85), inset 0 0 12px rgba(255,255,255,0.65);
+      display: grid; place-items: center; font-size: 2rem; font-weight: 900; color: #78350f;
+      cursor: pointer; animation: goldenBob 1.3s ease-in-out infinite alternate;
+    }
+    .golden-btc:hover { transform: scale(1.14); }
+    @keyframes goldenBob { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-10px) rotate(6deg); } }
+    #toast-container { position: fixed; top: 66px; right: 16px; z-index: 950; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 340px; }
+    .toast { background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(14px); border: 1px solid var(--border-gold); border-radius: 12px; padding: 10px 14px; font-size: 0.82rem; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,0.5); animation: toastIn 0.25s ease-out; }
+    @keyframes toastIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Modals */
+    .modal-backdrop { position: fixed; inset: 0; z-index: 900; background: rgba(2, 6, 17, 0.78); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 16px; }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 760px; max-height: 88vh; background: rgba(13, 20, 38, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; box-shadow: 0 24px 64px rgba(0,0,0,0.75);
+      display: flex; flex-direction: column; overflow: hidden; animation: modalPop 0.2s ease-out;
+    }
+    @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .modal-title { font-size: 1.08rem; font-weight: 800; }
+    .modal-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+    .modal-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .modal-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .section-box { background: rgba(20, 30, 54, 0.55); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 11px; }
+    .section-title { font-size: 0.92rem; font-weight: 700; color: var(--gold-300); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .field-label { font-size: 0.76rem; color: var(--text-muted); margin-bottom: 4px; display: block; font-weight: 600; }
+    .input, textarea.input, select.input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: rgba(5, 8, 17, 0.72); color: var(--text-main); font-size: 0.85rem; font-family: inherit; outline: none; }
+    .input:focus { border-color: var(--gold-400); }
+    .row-flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .panic-preview-box { width: 100%; height: 150px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: #0b1120; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .panic-preview-box img { width: 100%; height: 100%; }
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .stat-table { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 10px; }
+    .stat-cell { background: rgba(5, 8, 17, 0.5); border: 1px solid var(--border-glass); border-radius: 10px; padding: 10px 12px; }
+    .stat-cell span { display: block; font-size: 0.72rem; color: var(--text-dim); }
+    .stat-cell strong { font-size: 0.94rem; }
+    .tab-row { display: flex; gap: 6px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; flex-wrap: wrap; }
+    .msg-note { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+    .msg-err { font-size: 0.8rem; color: var(--rose-400); font-weight: 600; }
+    .msg-ok { font-size: 0.8rem; color: var(--emerald-400); font-weight: 600; }
+
+    @media (max-width: 1023px) {
+      #app { height: auto; min-height: 100vh; }
+      .mobile-tabs { display: flex; }
+      .dashboard { grid-template-columns: 1fr; flex: none; }
+      .panel { display: none; max-height: 78vh; }
+      .panel.mobile-active { display: flex; }
+      .center-panel { min-height: 540px; }
+    }
+  </style>
+</head>
+<body>
+
+  <button id="panic-btn" title="Notfall-Ansicht (Escape)" aria-label="Notfall-Ansicht">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  </button>
+
+  <div id="panic-overlay" aria-hidden="true">
+    <img id="panic-img" alt="Dokument" />
+    <button id="panic-exit-zone" aria-label="Zurück"></button>
+  </div>
+
+  <div id="fx-layer"></div>
+  <div id="toast-container"></div>
+
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo">₿</div>
+        <div>
+          <div class="brand-title">BitPulse</div>
+          <div class="brand-sub">Endlos-Krypto-Imperium</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-gold" id="btn-open-rebirth"><span>♻️ Rebirth</span><span class="pill-badge tabular" id="badge-rebirth">+0 RT</span></button>
+        <button class="btn btn-purple" id="btn-open-ascension"><span>✦ Prestige</span><span class="pill-badge purple tabular" id="badge-ascension">0 💎</span></button>
+        <button class="btn btn-cyan" id="btn-open-research"><span>🔬 Forschung</span><span class="pill-badge cyan tabular" id="badge-research">0</span></button>
+        <button class="btn" id="btn-open-achievements"><span>🏆 Erfolge</span><span class="pill-badge tabular" id="badge-ach">0/30</span></button>
+        <button class="btn" id="btn-open-stats">📊 Statistik</button>
+        <button class="btn" id="btn-open-save">💾 Save</button>
+        <button class="btn" id="btn-toggle-audio">🔊 Audio</button>
+        <button class="btn" id="btn-open-menu">⚙ Menü</button>
+      </div>
+    </header>
+
+    <div class="mobile-tabs">
+      <button class="mobile-tab active" data-tab="center">₿ Mining</button>
+      <button class="mobile-tab" data-tab="left">⚡ Klicks</button>
+      <button class="mobile-tab" data-tab="right">🏭 Miner</button>
+    </div>
+
+    <main class="dashboard">
+      <section class="panel" id="panel-left" data-col="left">
+        <div class="panel-header">
+          <div class="panel-title">⚡ Klick-Upgrades</div>
+          <span class="msg-note tabular" id="click-upg-summary">Krit: 6%</span>
+        </div>
+        <div class="panel-scroll" id="click-upgrades-list"></div>
+      </section>
+
+      <section class="panel center-panel mobile-active" id="panel-center" data-col="center">
+        <div class="stats-hero">
+          <div class="btc-label">Aktueller Kontostand</div>
+          <div class="btc-amount tabular" id="display-btc">0 BTC</div>
+          <div class="substats-row">
+            <div class="stat-chip"><span class="stat-chip-label">BTC / Sekunde</span><span class="stat-chip-val cyan tabular" id="display-bps">0 /s</span></div>
+            <div class="stat-chip"><span class="stat-chip-label">Klick-Kraft</span><span class="stat-chip-val gold tabular" id="display-cpc">1 BTC</span></div>
+            <div class="stat-chip"><span class="stat-chip-label">Gesamt-Multi</span><span class="stat-chip-val emerald tabular" id="display-total-mult">x1.00</span></div>
+          </div>
+          <div class="mult-badges" id="active-mult-badges"></div>
+        </div>
+
+        <!-- Live Market & Mining Modus -->
+        <div class="market-strip">
+          <div class="market-info">
+            <span style="color:var(--text-dim); font-size:0.66rem;">LIVE KRYPTO-MARKT</span>
+            <span class="market-price tabular" id="market-price-text">$68,000 • x1.00</span>
+          </div>
+          <svg id="market-sparkline" width="90" height="26" viewBox="0 0 90 26"></svg>
+          <div class="market-modes" id="mining-mode-btns">
+            <button class="mode-btn active" data-mm="balanced" title="Standard: Ausgeglichen">⚖️ Bal</button>
+            <button class="mode-btn" data-mm="overclock" title="+45% Miner BPS, -25% Klick-Kraft">🔥 BPS</button>
+            <button class="mode-btn" data-mm="sniper" title="+65% Klick-Kraft, -20% Miner BPS">🎯 Klick</button>
+          </div>
+        </div>
+
+        <div class="coin-stage" id="coin-stage">
+          <div class="coin-halo"></div>
+          <button id="btc-button" aria-label="Bitcoin minen">
+            <svg viewBox="0 0 240 240" width="196" height="196" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="coinOuter" cx="35%" cy="30%" r="72%">
+                  <stop offset="0%" stop-color="#fef9c3"/><stop offset="28%" stop-color="#fbbf24"/>
+                  <stop offset="72%" stop-color="#d97706"/><stop offset="100%" stop-color="#78350f"/>
+                </radialGradient>
+                <radialGradient id="coinInner" cx="38%" cy="32%" r="68%">
+                  <stop offset="0%" stop-color="#fde68a"/><stop offset="40%" stop-color="#f59e0b"/>
+                  <stop offset="85%" stop-color="#b45309"/><stop offset="100%" stop-color="#78350f"/>
+                </radialGradient>
+                <linearGradient id="coinRim" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fffbeb" stop-opacity="0.9"/><stop offset="50%" stop-color="#f59e0b" stop-opacity="0.3"/><stop offset="100%" stop-color="#fef3c7" stop-opacity="0.8"/>
+                </linearGradient>
+                <linearGradient id="symbolGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#fffbeb"/><stop offset="55%" stop-color="#fde68a"/><stop offset="100%" stop-color="#92400e"/>
+                </linearGradient>
+                <filter id="emboss" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#451a03" flood-opacity="0.7"/></filter>
+              </defs>
+              <circle cx="120" cy="120" r="114" fill="url(#coinOuter)" stroke="url(#coinRim)" stroke-width="4"/>
+              <circle cx="120" cy="120" r="98" fill="none" stroke="#fef3c7" stroke-opacity="0.45" stroke-width="2" stroke-dasharray="6 5"/>
+              <circle cx="120" cy="120" r="90" fill="url(#coinInner)" stroke="#78350f" stroke-width="2.5"/>
+              <path d="M52 72 A 84 84 0 0 1 186 68" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="6" stroke-linecap="round"/>
+              <g filter="url(#emboss)" transform="rotate(11 120 120)">
+                <text x="120" y="156" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="112" fill="url(#symbolGrad)">₿</text>
+              </g>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 3 Aktive Skills -->
+        <div class="skills-row">
+          <button class="skill-btn" id="skill-overclock"><span>⚡ Overclock</span><span class="skill-sub tabular" id="skill-overclock-st">Bereit (x3 • 30s)</span></button>
+          <button class="skill-btn" id="skill-block"><span>🔨 Block-Fund</span><span class="skill-sub tabular" id="skill-block-st">Bereit (3 Min BPS)</span></button>
+          <button class="skill-btn" id="skill-combo"><span>🔥 Hyper-Combo</span><span class="skill-sub tabular" id="skill-combo-st">Bereit (5x • 20s)</span></button>
+        </div>
+
+        <div class="arena-footer">
+          <div class="combo-box">
+            <div class="combo-head"><span>🔥 Klick-Combo</span><span class="combo-mult-text tabular" id="combo-text">x1.00 (Max x5.00)</span></div>
+            <div class="combo-track"><div class="combo-fill" id="combo-fill"></div></div>
+          </div>
+          <div class="mission-box" id="mission-box">
+            <span id="mission-text">🎯 Auftrag: ...</span>
+            <span class="tabular" id="mission-prog" style="color:var(--cyan-400); font-weight:700;">0/100</span>
+          </div>
+          <div class="automation-bar" id="automation-bar"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-right" data-col="right">
+        <div class="panel-header">
+          <div class="panel-title">🏭 Miner (30+ Tiers)</div>
+          <div class="buy-toggle" id="buy-mode-toggle">
+            <button data-mode="1" class="active">Buy 1</button>
+            <button data-mode="10">Buy 10</button>
+            <button data-mode="max">Buy Max</button>
+          </div>
+        </div>
+        <div class="panel-scroll" id="miner-upgrades-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Rebirth -->
+  <div class="modal-backdrop" id="modal-rebirth">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">♻️ Rebirth &amp; Rebirth-Shop</div><button class="modal-close" data-close="modal-rebirth">✕</button></div>
+      <div class="modal-body">
+        <div class="section-box">
+          <div class="section-title"><span>Rebirth auslösen (ab 1.00 B Run-BTC)</span><span class="tabular" id="rebirth-current-rt">Verfügbar: 0 RT</span></div>
+          <p class="msg-note">Setzt aktuelle BTC, Klicks, Miner &amp; Forschungen zurück und gewährt <strong>Rebirth-Tokens (RT)</strong>. Jeder insgesamt verdiente RT in dieser Ascension verleiht <strong>+3 % Grundleistung</strong>.</p>
+          <div class="row-flex" style="justify-content: space-between;">
+            <span class="tabular" id="rebirth-pending-info" style="font-weight:700; color:var(--gold-300);">Bei Rebirth: +0 RT</span>
+            <button class="btn btn-gold" id="btn-do-rebirth">Jetzt Rebirth ausführen</button>
+          </div>
+        </div>
+        <div class="section-box">
+          <div class="section-title"><span>Permanenter Rebirth-Shop</span></div>
+          <div class="shop-grid" id="rebirth-shop-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Ascension & Transzendenz -->
+  <div class="modal-backdrop" id="modal-ascension">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">✦ Höhere Prestige-Dimensionen</div><button class="modal-close" data-close="modal-ascension">✕</button></div>
+      <div class="modal-body">
+        <div class="tab-row">
+          <button class="btn btn-purple" id="tab-btn-asc">💎 Ebene 2: Ascension</button>
+          <button class="btn btn-cyan" id="tab-btn-trans">⚛️ Ebene 3: Transzendenz</button>
+        </div>
+
+        <div id="prestige-tab-asc" style="display:flex; flex-direction:column; gap:12px;">
+          <div class="section-box">
+            <div class="section-title"><span>Super-Rebirth: Ascension (ab 1.00 M RT)</span><span class="tabular" id="asc-crystals-owned">0 💎</span></div>
+            <p class="msg-note">Setzt BTC, Upgrades, RT &amp; Rebirth-Shop zurück und verleiht <strong>Satoshi-Kristalle (💎)</strong> für gewaltige permanente Multiplikatoren.</p>
+            <div class="row-flex" style="justify-content: space-between;">
+              <div>
+                <div class="tabular" id="asc-progress-text" style="font-size:0.82rem; color:var(--text-muted);">Fortschritt: 0 / 1.00 M RT</div>
+                <div class="tabular" id="asc-pending-info" style="font-weight:700; color:var(--purple-400);">Bei Ascension: +0 💎</div>
+              </div>
+              <button class="btn btn-purple" id="btn-do-ascension">Ascension ausführen</button>
+            </div>
+          </div>
+          <div class="section-box">
+            <div class="section-title"><span>Satoshi-Kristall-Shop</span></div>
+            <div class="shop-grid" id="ascension-shop-list"></div>
+          </div>
+        </div>
+
+        <div id="prestige-tab-trans" style="display:none; flex-direction:column; gap:12px;">
+          <div class="section-box">
+            <div class="section-title"><span>Kosmische Transzendenz (ab 100.00 K 💎)</span><span class="tabular" id="trans-cores-owned">0 ⚛️</span></div>
+            <p class="msg-note">Ultimative Prestige-Ebene! Setzt auch Satoshi-Kristalle und den Ascension-Shop zurück und erzeugt <strong>Genesis-Kerne (⚛️)</strong> mit extremen kosmischen Effekten.</p>
+            <div class="row-flex" style="justify-content: space-between;">
+              <div>
+                <div class="tabular" id="trans-progress-text" style="font-size:0.82rem; color:var(--text-muted);">Fortschritt: 0 / 100.00 K 💎</div>
+                <div class="tabular" id="trans-pending-info" style="font-weight:700; color:var(--cyan-400);">Bei Transzendenz: +0 ⚛️</div>
+              </div>
+              <button class="btn btn-cyan" id="btn-do-transcend">Transzendieren</button>
+            </div>
+          </div>
+          <div class="section-box">
+            <div class="section-title"><span>Genesis-Kern-Shop</span></div>
+            <div class="shop-grid" id="trans-shop-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Forschung & Synergien -->
+  <div class="modal-backdrop" id="modal-research">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">🔬 Technologie &amp; Forschungslabor</div><button class="modal-close" data-close="modal-research">✕</button></div>
+      <div class="modal-body">
+        <p class="msg-note">Spezialisierte Tech-Upgrades für massive Tier-Multiplikatoren, Offline-Effizienz, Skill-Cooldowns und Synergien.</p>
+        <div class="shop-grid" id="research-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Erfolge (30 Achievements) -->
+  <div class="modal-backdrop" id="modal-achievements">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">🏆 Erfolge &amp; Meilensteine</div><button class="modal-close" data-close="modal-achievements">✕</button></div>
+      <div class="modal-body">
+        <div class="section-box">
+          <div class="section-title"><span>Permanenter Erfolgs-Bonus</span><span class="tabular" id="ach-bonus-summary">0 / 30 (+0%)</span></div>
+          <p class="msg-note">Jeder freigeschaltete Erfolg erhöht dein gesamtes Einkommen dauerhaft um <strong>+4 % multiplikativ</strong>!</p>
+        </div>
+        <div class="shop-grid" id="achievements-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Statistiken -->
+  <div class="modal-backdrop" id="modal-stats">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">📊 Imperiums-Statistiken</div><button class="modal-close" data-close="modal-stats">✕</button></div>
+      <div class="modal-body"><div class="stat-table" id="stats-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Save Export / Import -->
+  <div class="modal-backdrop" id="modal-save">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">💾 Spielstand Export / Import</div><button class="modal-close" data-close="modal-save">✕</button></div>
+      <div class="modal-body">
+        <div class="section-box">
+          <div class="section-title"><span>Spielstand exportieren (Base64 + Checksumme)</span></div>
+          <p class="msg-note">Auto-Save speichert alle 5 Sekunden lokal in <code>localStorage</code>.</p>
+          <textarea id="save-export-text" class="input" rows="4" readonly></textarea>
+          <div class="row-flex">
+            <button class="btn btn-gold" id="btn-export-copy">Code generieren &amp; kopieren</button>
+            <span id="save-export-status" class="msg-ok"></span>
+          </div>
+        </div>
+        <div class="section-box">
+          <div class="section-title"><span>Spielstand importieren</span></div>
+          <textarea id="save-import-text" class="input" rows="4" placeholder="Base64-Spielstand hier einfügen..."></textarea>
+          <div class="row-flex">
+            <button class="btn btn-emerald" id="btn-import-load">Code prüfen &amp; laden</button>
+            <span id="save-import-status"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Offline -->
+  <div class="modal-backdrop" id="modal-offline">
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-header"><div class="modal-title">🌙 Willkommen zurück!</div><button class="modal-close" data-close="modal-offline">✕</button></div>
+      <div class="modal-body">
+        <p class="msg-note">Während deiner Abwesenheit (<strong id="offline-time-text">0s</strong>) haben deine Miner weitergearbeitet (Effizienz: <strong id="offline-eff-text">50%</strong>):</p>
+        <div style="text-align:center; padding:12px; background:rgba(245,158,11,0.12); border:1px solid var(--border-gold); border-radius:12px;">
+          <div style="font-size:1.5rem; font-weight:900; color:var(--gold-300);" class="tabular" id="offline-earned-text">+0 BTC</div>
+        </div>
+        <button class="btn btn-gold" data-close="modal-offline" style="justify-content:center;">Einsammeln</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Zweistufiges Menü -->
+  <div class="modal-backdrop" id="modal-menu">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">⚙ Einstellungen &amp; System-Menü</div><button class="modal-close" data-close="modal-menu">✕</button></div>
+      <div class="modal-body">
+        <div class="section-box">
+          <div class="section-title"><span>🛡️ Bereich 1: Panic-Modus &amp; Tarnung (Öffentlich)</span></div>
+          <div class="grid-2">
+            <div>
+              <label class="field-label" for="panic-file-input">Option A: Bild vom Gerät hochladen</label>
+              <input id="panic-file-input" class="input" type="file" accept="image/*" />
+              <div class="msg-note" id="panic-upload-info" style="margin-top:4px;">Wird lokal gespeichert (automatische Komprimierung bei großen Dateien).</div>
+            </div>
+            <div>
+              <label class="field-label" for="panic-url-input">Option B: Direkte Bild-URL einfügen</label>
+              <div class="row-flex">
+                <input id="panic-url-input" class="input" type="url" placeholder="https://beispiel.de/bild.png" style="flex:1;" />
+                <button class="btn" id="btn-panic-url-apply">Übernehmen</button>
+              </div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label class="field-label" for="panic-fit-select">Bild-Darstellung im Vollbild</label>
+              <select id="panic-fit-select" class="input">
+                <option value="cover">Vollbild ausfüllen (cover)</option>
+                <option value="contain">Komplett anzeigen (contain)</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="panic-title-input">Fake-Browser-Tab-Titel</label>
+              <input id="panic-title-input" class="input" type="text" placeholder="Mathematik Aufgabenblatt – Google Docs" />
+            </div>
+          </div>
+          <div>
+            <div class="row-flex" style="justify-content: space-between; margin-bottom:6px;">
+              <span class="field-label" style="margin:0;">Live-Vorschau des aktuellen Panic-Bildes</span>
+              <button class="btn" id="btn-panic-reset">Standard-Fake-Bild wiederherstellen</button>
+            </div>
+            <div class="panic-preview-box"><img id="panic-preview-img" alt="Panic Vorschau" /></div>
+            <p class="msg-note" style="margin-top:6px;">Mit <strong>Escape</strong> oder dem Button oben links auslösen. Ein Klick in die obere linke Ecke (oder erneut <strong>Escape</strong>) beendet den Modus.</p>
+          </div>
+        </div>
+
+        <div class="section-box" id="admin-section">
+          <div class="section-title"><span>🔐 Bereich 2: Extra Admin-Menü</span><span id="admin-lock-badge" class="msg-note">Gesperrt</span></div>
+          <div id="admin-locked-view">
+            <label class="field-label" for="admin-code-input">Zugangscode eingeben</label>
+            <div class="row-flex">
+              <input id="admin-code-input" class="input" type="password" autocomplete="off" style="flex:1;" />
+              <button class="btn btn-gold" id="btn-admin-unlock">Entsperren</button>
+            </div>
+            <div id="admin-auth-msg" style="margin-top:6px;"></div>
+          </div>
+
+          <div id="admin-unlocked-view" style="display:none; flex-direction:column; gap:12px;">
+            <div class="grid-2">
+              <div>
+                <label class="field-label">BTC bearbeiten (z. B. 1e20, 1.5e100)</label>
+                <div class="row-flex">
+                  <input id="adm-btc-val" class="input" type="text" value="1e18" style="flex:1;" />
+                  <button class="btn" id="adm-btc-add">+ Add</button>
+                  <button class="btn btn-gold" id="adm-btc-set">Setzen</button>
+                </div>
+              </div>
+              <div>
+                <label class="field-label">Rebirth-Tokens (RT) bearbeiten</label>
+                <div class="row-flex">
+                  <input id="adm-rt-val" class="input" type="text" value="1e6" style="flex:1;" />
+                  <button class="btn" id="adm-rt-add">+ Add</button>
+                  <button class="btn btn-gold" id="adm-rt-set">Setzen</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label class="field-label">Satoshi-Kristalle (💎) bearbeiten</label>
+                <div class="row-flex">
+                  <input id="adm-cr-val" class="input" type="text" value="1e5" style="flex:1;" />
+                  <button class="btn" id="adm-cr-add">+ Add</button>
+                  <button class="btn btn-purple" id="adm-cr-set">Setzen</button>
+                </div>
+              </div>
+              <div>
+                <label class="field-label">Genesis-Kerne (⚛️) bearbeiten</label>
+                <div class="row-flex">
+                  <input id="adm-gn-val" class="input" type="text" value="100" style="flex:1;" />
+                  <button class="btn" id="adm-gn-add">+ Add</button>
+                  <button class="btn btn-cyan" id="adm-gn-set">Setzen</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Globaler Multiplikator-Override (x1 bis beliebig)</label>
+              <div class="row-flex">
+                <input id="adm-mult-val" class="input" type="text" value="1" style="flex:1;" />
+                <button class="btn btn-gold" id="adm-mult-apply">Anwenden</button>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Quick-Actions</label>
+              <div class="row-flex">
+                <button class="btn btn-gold" id="adm-spawn-golden">✨ Goldenen Bitcoin spawnen</button>
+                <button class="btn btn-gold" id="adm-trigger-frenzy">🔥 7x Frenzy starten</button>
+                <button class="btn btn-emerald" id="adm-unlock-auto">🤖 Alle Auto-Buyer &amp; Forschung</button>
+                <button class="btn btn-danger" id="adm-hard-reset">⚠️ Hard Reset (Spielstand löschen)</button>
+              </div>
+            </div>
+            <div class="row-flex" style="justify-content:flex-end;">
+              <button class="btn" id="btn-admin-lock">🔒 Admin-Bereich sperren</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    /* 1. BIG NUMBER ENGINE */
+    class BN {
+      constructor(m = 0, e = 0) {
+        if (!Number.isFinite(m) || !Number.isFinite(e) || m === 0) { this.m = 0; this.e = 0; return; }
+        if (e !== Math.floor(e)) { const fe = Math.floor(e); m *= Math.pow(10, e - fe); e = fe; }
+        const abs = Math.abs(m);
+        if (abs > 0) {
+          const shift = Math.floor(Math.log10(abs));
+          if (Number.isFinite(shift) && shift !== 0) { m /= Math.pow(10, shift); e += shift; }
+          while (Math.abs(m) >= 10) { m /= 10; e += 1; }
+          while (Math.abs(m) > 0 && Math.abs(m) < 1) { m *= 10; e -= 1; }
+        }
+        if (!Number.isFinite(m) || !Number.isFinite(e) || m === 0) { this.m = 0; this.e = 0; }
+        else { this.m = m; this.e = e; }
+      }
+      static from(v) {
+        if (v instanceof BN) return new BN(v.m, v.e);
+        if (typeof v === "number") return Number.isFinite(v) ? new BN(v, 0) : BN.ZERO;
+        if (v && typeof v === "object" && "m" in v && "e" in v) return new BN(Number(v.m), Number(v.e));
+        if (typeof v === "string") {
+          const clean = v.trim().replace(/\s+/g, "").replace(",", ".");
+          if (!clean) return BN.ZERO;
+          const parts = clean.split(/e/i);
+          if (parts.length === 1) { const n = Number(parts[0]); return Number.isFinite(n) ? new BN(n, 0) : BN.ZERO; }
+          if (parts.length === 2) {
+            const mant = parts[0] === "" || parts[0] === "+" ? 1 : (parts[0] === "-" ? -1 : Number(parts[0]));
+            const exp = Number(parts[1]);
+            return (Number.isFinite(mant) && Number.isFinite(exp)) ? new BN(mant, exp) : BN.ZERO;
+          }
+        }
+        return BN.ZERO;
+      }
+      isZero() { return this.m === 0; }
+      log10() { return this.m <= 0 ? -Infinity : Math.log10(this.m) + this.e; }
+      cmp(other) {
+        const b = BN.from(other);
+        if (this.m === 0 && b.m === 0) return 0;
+        if (this.m === 0) return b.m > 0 ? -1 : 1;
+        if (b.m === 0) return this.m > 0 ? 1 : -1;
+        if (this.m > 0 && b.m < 0) return 1;
+        if (this.m < 0 && b.m > 0) return -1;
+        const sign = this.m > 0 ? 1 : -1;
+        if (this.e !== b.e) return this.e > b.e ? sign : -sign;
+        if (Math.abs(this.m - b.m) < 1e-12) return 0;
+        return this.m > b.m ? 1 : -1;
+      }
+      gt(b) { return this.cmp(b) > 0; }
+      gte(b) { return this.cmp(b) >= 0; }
+      lt(b) { return this.cmp(b) < 0; }
+      lte(b) { return this.cmp(b) <= 0; }
+      add(other) {
+        const b = BN.from(other);
+        if (this.m === 0) return b;
+        if (b.m === 0) return this;
+        const diff = this.e - b.e;
+        if (diff > 15) return this;
+        if (diff < -15) return b;
+        return diff >= 0 ? new BN(this.m + b.m * Math.pow(10, -diff), this.e) : new BN(b.m + this.m * Math.pow(10, diff), b.e);
+      }
+      sub(other) { const b = BN.from(other); return this.add(new BN(-b.m, b.e)); }
+      mul(other) { const b = BN.from(other); return (this.m === 0 || b.m === 0) ? BN.ZERO : new BN(this.m * b.m, this.e + b.e); }
+      div(other) { const b = BN.from(other); return (this.m === 0 || b.m === 0) ? BN.ZERO : new BN(this.m / b.m, this.e - b.e); }
+      pow(exp) {
+        if (exp === 0) return BN.ONE;
+        if (this.m <= 0 || !Number.isFinite(exp)) return BN.ZERO;
+        const totalLog = (Math.log10(this.m) + this.e) * exp;
+        if (!Number.isFinite(totalLog)) return BN.ZERO;
+        const ne = Math.floor(totalLog);
+        return new BN(Math.pow(10, totalLog - ne), ne);
+      }
+      floor() {
+        if (this.m === 0 || this.e >= 15) return this;
+        if (this.e < 0) return this.m > 0 ? BN.ZERO : new BN(-1, 0);
+        return BN.from(Math.floor(this.m * Math.pow(10, this.e)));
+      }
+      max(other) { const b = BN.from(other); return this.gte(b) ? this : b; }
+      toNumber() {
+        if (this.m === 0) return 0;
+        if (this.e > 308) return Infinity;
+        if (this.e < -323) return 0;
+        return this.m * Math.pow(10, this.e);
+      }
+      toJSON() { return [Number(this.m.toPrecision(12)), this.e]; }
+      static fromJSON(arr) { return (Array.isArray(arr) && arr.length === 2) ? new BN(Number(arr[0]), Number(arr[1])) : BN.from(arr); }
+    }
+    BN.ZERO = new BN(0, 0);
+    BN.ONE = new BN(1, 0);
+
+    const SUFFIXES = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", "Vg"];
+    function formatBN(val, isInt = false) {
+      const bn = BN.from(val);
+      if (bn.isZero()) return "0";
+      if (bn.m < 0) return "-" + formatBN(new BN(-bn.m, bn.e), isInt);
+      if (bn.e < 3) {
+        const n = bn.toNumber();
+        if (isInt) return Math.floor(n).toString();
+        if (n >= 100) return n.toFixed(1).replace(/\.0$/, "");
+        if (n >= 10) return n.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+        return n.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+      }
+      const idx = Math.floor(bn.e / 3);
+      if (idx < SUFFIXES.length) {
+        const scaled = bn.m * Math.pow(10, bn.e % 3);
+        if (scaled >= 999.995 && idx + 1 < SUFFIXES.length) return "1.00 " + SUFFIXES[idx + 1];
+        return scaled.toFixed(2) + (SUFFIXES[idx] ? " " + SUFFIXES[idx] : "");
+      }
+      return bn.e < 1e6 ? `${bn.m.toFixed(2)}e${bn.e}` : `${bn.m.toFixed(2)}e${formatBN(BN.from(bn.e), true)}`;
+    }
+
+    /* 2. GEHEIMCODE-HASH-PRÜFUNG */
+    function verifySecretHash(input) {
+      const s = "bp9x_salt:" + String(input).trim() + ":k7m";
+      let h1 = 0x811c9dc5, h2 = 0x9e3779b9;
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        h1 ^= c; h1 = Math.imul(h1, 0x01000193);
+        h2 = Math.imul(h2 ^ (c + i * 17), 0x85ebca6b); h2 ^= h2 >>> 13;
+      }
+      return ((h1 >>> 0).toString(16).padStart(8, "0") + (h2 >>> 0).toString(16).padStart(8, "0")) === "0f565eb68a5d1659";
+    }
+
+    /* 3. DEFAULT PANIC INLINE-SVG */
+    const DEFAULT_PANIC_TITLE = "Mathematik Aufgabenblatt – Google Docs";
+    const DEFAULT_PANIC_SVG = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900">
+      <rect width="1440" height="900" fill="#f1f3f4"/><rect width="1440" height="64" fill="#fff"/>
+      <line x1="0" y1="64" x2="1440" y2="64" stroke="#dadce0"/>
+      <rect x="24" y="16" width="26" height="32" rx="4" fill="#4285f4"/>
+      <line x1="30" y1="26" x2="44" y2="26" stroke="#fff" stroke-width="2.5"/><line x1="30" y1="33" x2="44" y2="33" stroke="#fff" stroke-width="2.5"/><line x1="30" y1="40" x2="39" y2="40" stroke="#fff" stroke-width="2.5"/>
+      <text x="64" y="30" font-family="Arial,sans-serif" font-size="18" fill="#202124" font-weight="600">Mathematik_Aufgabenblatt_4_Analysis.docx</text>
+      <text x="64" y="50" font-family="Arial,sans-serif" font-size="12" fill="#5f6368">Datei   Bearbeiten   Ansicht   Einfügen   Format   Tools   Erweiterungen   Hilfe</text>
+      <rect x="1290" y="14" width="110" height="36" rx="18" fill="#c2e7ff"/>
+      <text x="1345" y="37" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#001d35" font-weight="600">Freigeben</text>
+      <rect x="24" y="76" width="1392" height="38" rx="19" fill="#edf2fa"/>
+      <text x="52" y="100" font-family="Arial,sans-serif" font-size="13" fill="#444746">↩  ↪  🖨   |   100% ▾   |   Normaler Text ▾   |   Arial ▾   |   11 ▾   |   B   I   U   A   |   ≡   ⋮≡</text>
+      <rect x="270" y="132" width="900" height="750" fill="#fff" stroke="#dadce0"/>
+      <text x="340" y="190" font-family="Arial,sans-serif" font-size="13" fill="#5f6368">Leistungskurs Mathematik Q2 • Gymnasium Nord • Schuljahr 2026/27</text>
+      <text x="340" y="232" font-family="Arial,sans-serif" font-size="25" fill="#1a73e8" font-weight="700">Aufgabenblatt 4: Differential- &amp; Integralrechnung</text>
+      <line x1="340" y1="248" x2="1100" y2="248" stroke="#e0e0e0" stroke-width="1.5"/>
+      <text x="340" y="286" font-family="Arial,sans-serif" font-size="16" fill="#202124" font-weight="700">Aufgabe 1: Kurvendiskussion einer ganzrationalen Funktion</text>
+      <text x="340" y="314" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">Gegeben ist die Funktion f mit f(x) = 0,25x³ − 1,5x² + 2x + 1 für x ∈ ℝ.</text>
+      <text x="360" y="344" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">a) Bestimmen Sie die ersten beiden Ableitungen f'(x) und f''(x).</text>
+      <text x="360" y="370" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">b) Berechnen Sie sämtliche Extrem- und Wendepunkte des Graphen G_f.</text>
+      <text x="360" y="396" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">c) Bestimmen Sie die Gleichung der Wendetangente t im Wendepunkt W.</text>
+      <rect x="340" y="420" width="380" height="210" fill="#fafafa" stroke="#dadce0"/>
+      <line x1="360" y1="540" x2="700" y2="540" stroke="#5f6368" stroke-width="1.5"/>
+      <line x1="470" y1="435" x2="470" y2="615" stroke="#5f6368" stroke-width="1.5"/>
+      <path d="M 380 605 Q 435 455 510 520 T 660 445" fill="none" stroke="#1a73e8" stroke-width="2.5"/>
+      <circle cx="510" cy="520" r="4" fill="#d93025"/>
+      <text x="520" y="516" font-family="Arial,sans-serif" font-size="12" fill="#d93025">W(2 | 1)</text>
+      <rect x="750" y="420" width="350" height="210" fill="#f8f9fa" stroke="#dadce0" rx="6"/>
+      <text x="770" y="450" font-family="Arial,sans-serif" font-size="15" fill="#202124" font-weight="700">Formelsammlung (Auszug)</text>
+      <text x="770" y="482" font-family="Courier New,monospace" font-size="13" fill="#3c4043">∫[a,b] f(x) dx = F(b) - F(a)</text>
+      <text x="770" y="512" font-family="Courier New,monospace" font-size="13" fill="#3c4043">P(X = k) = (n über k)·p^k·(1-p)^(n-k)</text>
+      <text x="770" y="542" font-family="Courier New,monospace" font-size="13" fill="#3c4043">E(X) = n · p    σ = √(n·p·(1-p))</text>
+      <text x="340" y="672" font-family="Arial,sans-serif" font-size="16" fill="#202124" font-weight="700">Aufgabe 2: Flächenberechnung und Stochastik</text>
+      <text x="340" y="702" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">a) Berechnen Sie den Inhalt der Fläche zwischen f und der x-Achse auf [0 ; 4].</text>
+      <text x="340" y="730" font-family="Arial,sans-serif" font-size="14" fill="#3c4043">b) Bei Ausschussquote p = 0,08 und n = 50: Berechnen Sie P(X ≤ 3).</text>
+      <text x="340" y="830" font-family="Arial,sans-serif" font-size="12" fill="#80868b">Seite 1 von 2 — Bearbeitungszeit: 90 Minuten — Hilfsmittel: WTR erlaubt</text>
+    </svg>`);
+
+    /* 4. WEB AUDIO API */
+    const Sound = {
+      ctx: null, enabled: true, panicMuted: false,
+      ensure() {
+        if (!this.enabled || this.panicMuted) return null;
+        if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; this.ctx = new AC(); }
+        if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+        return this.ctx;
+      },
+      setPanicMute(muted) {
+        this.panicMuted = muted;
+        if (this.ctx) { if (muted) this.ctx.suspend().catch(() => {}); else if (this.enabled) this.ctx.resume().catch(() => {}); }
+      },
+      tone(freq, dur, type = "sine", vol = 0.1, slideTo = null) {
+        const ctx = this.ensure(); if (!ctx) return;
+        const now = ctx.currentTime, osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, now);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, now + dur);
+        gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(vol, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + dur + 0.02);
+      },
+      click(c = 1) { const p = 340 + Math.min(c, 5) * 45; this.tone(p, 0.07, "triangle", 0.09, p * 1.35); },
+      crit() { this.tone(660, 0.14, "sine", 0.12, 1320); setTimeout(() => this.tone(990, 0.18, "triangle", 0.09, 1580), 40); },
+      buy() { this.tone(520, 0.08, "sine", 0.08, 780); },
+      milestone() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => setTimeout(() => this.tone(f, 0.18, "triangle", 0.09), i * 55)); },
+      frenzy() { [440, 554.37, 659.25, 880, 1108.73].forEach((f, i) => setTimeout(() => this.tone(f, 0.25, "sine", 0.11), i * 65)); },
+      prestige() { this.tone(220, 0.45, "sawtooth", 0.09, 880); setTimeout(() => this.tone(440, 0.4, "triangle", 0.11, 1320), 120); }
+    };
+
+    /* 5. KLICK-UPGRADES (10 Tiers) & 30 HANDCRAFTED MINER + ENDLOS-GENERATOR */
+    const CLICK_UPGRADES = [
+      { id: "c_mouse", name: "Ergonomische Gaming-Maus", icon: "🖱️", desc: "Erhöht Basis-Klick um +1 BTC (skaliert stark mit Meilensteinen).", baseCost: 20, costRate: 1.24, maxLevel: Infinity, milestone: true, effectText: (l, m) => `+${formatBN(BN.from(l).mul(m))} Basis-Klick` },
+      { id: "c_macro", name: "Makro-Tasten-Modul", icon: "🎛️", desc: "Verstärkt jeden Klick um +10 Basis-BTC pro Level.", baseCost: 650, costRate: 1.27, maxLevel: Infinity, milestone: true, effectText: (l, m) => `+${formatBN(BN.from(l * 10).mul(m))} Basis-Klick` },
+      { id: "c_mech", name: "Titan-Schalter-Cluster", icon: "⌨️", desc: "Massiver +150 Basis-BTC Bonus pro Level.", baseCost: 35000, costRate: 1.30, maxLevel: Infinity, milestone: true, effectText: (l, m) => `+${formatBN(BN.from(l * 150).mul(m))} Basis-Klick` },
+      { id: "c_bps_pct", name: "Hash-Synergie", icon: "🔗", desc: "Jeder Klick gibt zusätzlich +0,8 % deiner aktuellen BPS.", baseCost: 15000, costRate: 1.54, maxLevel: Infinity, milestone: false, effectText: (l) => `+${(l * 0.8).toFixed(1)}% der BPS/Klick` },
+      { id: "c_crit_chance", name: "Glücks-Algorithmus", icon: "🎯", desc: "Erhöht Kritische Klick-Chance um +1,5 % pro Level (Max 75 %).", baseCost: 5000, costRate: 1.68, maxLevel: 46, milestone: false, effectText: (l) => `Krit-Chance: ${(6 + l * 1.5).toFixed(1)}%` },
+      { id: "c_crit_mult", name: "Overclock-Krit-Multi", icon: "💥", desc: "Erhöht den Krit-Multiplikator um +0,75x pro Level.", baseCost: 18000, costRate: 1.50, maxLevel: Infinity, milestone: false, effectText: (l) => `Krit-Multi: x${(3 + l * 0.75).toFixed(2)}` },
+      { id: "c_autoclick", name: "Quanten-Auto-Klicker", icon: "🤖", desc: "Klickt automatisch +1x pro Sekunde (inkl. Krits).", baseCost: 75000, costRate: 1.65, maxLevel: Infinity, milestone: false, effectText: (l) => `${l} Auto-Klicks / Sek` },
+      { id: "c_combo_dur", name: "Adrenalin-Kondensator", icon: "🔥", desc: "Verlängert Combo-Dauer und bremst Abfall um 10 %/Lv.", baseCost: 22000, costRate: 1.72, maxLevel: 30, milestone: false, effectText: (l) => `Combo-Dauer: ${(2.2 + l * 0.4).toFixed(1)}s` },
+      { id: "c_hyper_mult", name: "Hyper-Tap-Verstärker", icon: "⚡", desc: "Multipliziert gesamte Klick-Kraft pro Level um x1,35.", baseCost: 2.5e6, costRate: 2.85, maxLevel: Infinity, milestone: true, effectText: (l, m) => `x${formatBN(BN.from(1.35).pow(l).mul(m))} Klick-Power` },
+      { id: "c_skill_amp", name: "Block-Resonanz-Kern", icon: "🔊", desc: "Verstärkt aktive Skill-Effekte & Klick-Kraft um x1,45/Lv.", baseCost: 1e9, costRate: 3.4, maxLevel: Infinity, milestone: true, effectText: (l, m) => `x${formatBN(BN.from(1.45).pow(l).mul(m))} Resonanz` }
+    ];
+
+    const HANDCRAFTED_MINERS = [
+      { id: "m_01", name: "USB-Stick Miner", icon: "🔌", desc: "Kleiner Stick mit großem Traum.", baseCost: 20, costRate: 1.18, baseBps: 0.2 },
+      { id: "m_02", name: "Alter Laptop", icon: "💻", desc: "Lüfter dreht am Limit, schürft aber stetig.", baseCost: 420, costRate: 1.18, baseBps: 2.5 },
+      { id: "m_03", name: "Raspi-Cluster", icon: "🍓", desc: "Acht vernetzte Einplatinenrechner im Regal.", baseCost: 9000, costRate: 1.19, baseBps: 34 },
+      { id: "m_04", name: "RTX-Gaming-Rig", icon: "🎮", desc: "Vier High-End-GPUs unter Wasserkühlung.", baseCost: 2.2e5, costRate: 1.19, baseBps: 460 },
+      { id: "m_05", name: "Keller-Mining-Rack", icon: "🗄️", desc: "Laut, warm und unaufhaltsam im Dauerbetrieb.", baseCost: 5.8e6, costRate: 1.19, baseBps: 6500 },
+      { id: "m_06", name: "ASIC-Farm", icon: "⚙️", desc: "Spezialisierte Hash-Chips in langen Reihen.", baseCost: 1.6e8, costRate: 1.20, baseBps: 92000 },
+      { id: "m_07", name: "Lagerhallen-Miner", icon: "🏭", desc: "Industriehalle voller Hochleistungs-Racks.", baseCost: 4.5e9, costRate: 1.20, baseBps: 1.35e6 },
+      { id: "m_08", name: "Island-Containerpark", icon: "🧊", desc: "Gratis Kälte und Vulkanstrom rund um die Uhr.", baseCost: 1.3e11, costRate: 1.20, baseBps: 2.0e7 },
+      { id: "m_09", name: "Wasserkraft-Mega-Farm", icon: "🌊", desc: "Direkt an einer riesigen Staumauer angeschlossen.", baseCost: 3.9e12, costRate: 1.20, baseBps: 3.1e8 },
+      { id: "m_10", name: "Geothermie-Rechenzentrum", icon: "🌋", desc: "Zapft tiefste Erdschichten für Endlos-Hashes an.", baseCost: 1.2e14, costRate: 1.21, baseBps: 4.8e9 },
+      { id: "m_11", name: "Arktis-Kryo-Anlage", icon: "❄️", desc: "Supraleitende Schaltkreise bei minus 200 Grad.", baseCost: 3.8e15, costRate: 1.21, baseBps: 7.5e10 },
+      { id: "m_12", name: "Tiefsee-Druck-Cluster", icon: "🌊", desc: "Gekühlt durch eisigen Ozeandruck in 8 km Tiefe.", baseCost: 1.2e17, costRate: 1.21, baseBps: 1.2e12 },
+      { id: "m_13", name: "Orbital-Solar-Satellit", icon: "🛰️", desc: "Ungefiltertes Sonnenlicht im niedrigen Erdorbit.", baseCost: 4.0e18, costRate: 1.21, baseBps: 2.0e13 },
+      { id: "m_14", name: "Mondkrater-Mining-Basis", icon: "🌑", desc: "Vakuumgekühlte Gigafarm auf der Mondrückseite.", baseCost: 1.4e20, costRate: 1.21, baseBps: 3.4e14 },
+      { id: "m_15", name: "Mars-Terraforming-Node", icon: "🔴", desc: "Heizt durch Abwärme die marsianische Atmosphäre.", baseCost: 5.0e21, costRate: 1.22, baseBps: 5.8e15 },
+      { id: "m_16", name: "Merkur-Hitzeschild-Farm", icon: "☄️", desc: "Erntet extreme Sonnenenergie dicht am Stern.", baseCost: 1.8e23, costRate: 1.22, baseBps: 1.0e17 },
+      { id: "m_17", name: "Asteroidengürtel-Schmelze", icon: "🪨", desc: "Baut automatisch Rohstoffe für neue Rigs ab.", baseCost: 6.8e24, costRate: 1.22, baseBps: 1.8e18 },
+      { id: "m_18", name: "Quanten-Hash-Prozessor", icon: "⚛️", desc: "Berechnet Nonces gleichzeitig in Superposition.", baseCost: 2.6e26, costRate: 1.22, baseBps: 3.2e19 },
+      { id: "m_19", name: "Fusions-Reaktor-Node", icon: "🔆", desc: "Miniatur-Sonne liefert Terawatt fürs Hashing.", baseCost: 1.0e28, costRate: 1.22, baseBps: 5.8e20 },
+      { id: "m_20", name: "Dyson-Schwarm-Segment", icon: "🛸", desc: "Tausende Solarsegel speisen einen Sternen-Cluster.", baseCost: 4.2e29, costRate: 1.23, baseBps: 1.1e22 },
+      { id: "m_21", name: "Dyson-Sphäre", icon: "☀️", desc: "Umschließt einen ganzen Stern für maximale Hashrate.", baseCost: 1.8e31, costRate: 1.23, baseBps: 2.1e23 },
+      { id: "m_22", name: "Neutronenstern-Pulsar-Rig", icon: "💫", desc: "Synchronisiert den Takt auf Millisekunden-Pulsare.", baseCost: 7.8e32, costRate: 1.23, baseBps: 4.0e24 },
+      { id: "m_23", name: "Schwarzes-Loch-Siphon", icon: "🕳️", desc: "Nutzt Hawking-Strahlung und Gravitationsenergie.", baseCost: 3.5e34, costRate: 1.23, baseBps: 7.8e25 },
+      { id: "m_24", name: "Galaktischer Blockchain-Kern", icon: "🌌", desc: "Vernetzt Milliarden Sternensysteme zu einem Block.", baseCost: 1.6e36, costRate: 1.23, baseBps: 1.5e27 },
+      { id: "m_25", name: "Quasar-Jet-Beschleuniger", icon: "🌠", desc: "Speist Lichtjahre lange Plasmastrahlen in Hash-Gatter.", baseCost: 7.5e37, costRate: 1.24, baseBps: 3.0e28 },
+      { id: "m_26", name: "Kardaschow-Typ-III-Netz", icon: "🕸️", desc: "Kontrolliert die Energie ganzer Galaxienhaufen.", baseCost: 3.6e39, costRate: 1.24, baseBps: 6.2e29 },
+      { id: "m_27", name: "Zeitkristall-Hash-Gitter", icon: "⏳", desc: "Validiert Blöcke bereits vor ihrer Entstehung.", baseCost: 1.8e41, costRate: 1.24, baseBps: 1.3e31 },
+      { id: "m_28", name: "Multiversums-Node", icon: "🌀", desc: "Schürft parallel über unzählige Realitäten hinweg.", baseCost: 9.0e42, costRate: 1.24, baseBps: 2.8e32 },
+      { id: "m_29", name: "Realitäts-Compiler", icon: "📐", desc: "Kompiliert Naturgesetze direkt in gültige Hashes.", baseCost: 4.8e44, costRate: 1.25, baseBps: 6.0e33 },
+      { id: "m_30", name: "Omniversum-Architekt", icon: "👑", desc: "Jeder Gedanke erschafft neue Blockchains.", baseCost: 2.6e46, costRate: 1.25, baseBps: 1.3e35 }
+    ];
+
+    const PROC_PREFIXES = ["Kosmischer Nexus", "Hyper-Singularität", "Omega-Ledger", "Astral-Validierer", "Dimensions-Reaktor", "Ewigkeits-Node", "Transzendenz-Matrix", "Unendlichkeits-Kern"];
+    const PROC_ICONS = ["🔮", "💠", "⚡", "🌠", "♾️", "🪐", "🧬", "👑"];
+    function toRoman(num) {
+      if (num > 3999) return String(num);
+      const map = [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+      let res = "";
+      for (const [v, s] of map) while (num >= v) { res += s; num -= v; }
+      return res;
+    }
+
+    const MINERS = [];
+    function initBaseMiners() {
+      MINERS.length = 0;
+      for (const m of HANDCRAFTED_MINERS) MINERS.push({ ...m, baseCost: BN.from(m.baseCost), baseBps: BN.from(m.baseBps) });
+    }
+    function ensureProceduralMiners(targetCount) {
+      while (MINERS.length < targetCount) {
+        const idx = MINERS.length, procIndex = idx - HANDCRAFTED_MINERS.length, prev = MINERS[idx - 1], mkNum = procIndex + 2;
+        MINERS.push({
+          id: `m_proc_${procIndex}`,
+          name: `${PROC_PREFIXES[procIndex % PROC_PREFIXES.length]} Mk. ${toRoman(mkNum)}`,
+          icon: PROC_ICONS[procIndex % PROC_ICONS.length],
+          desc: `Prozedural erzeugte Endlos-Stufe #${mkNum} jenseits aller bekannten Dimensionen.`,
+          baseCost: prev.baseCost.mul(55), costRate: 1.25, baseBps: prev.baseBps.mul(22)
+        });
+      }
+    }
+
+    /* 6. FORSCHUNGSBAUM (18 Techs pro Run) */
+    const RESEARCH_LIST = [
+      { id: "t_usb", name: "USB-Overvolting", icon: "🔌", desc: "USB-Stick Miner & Alte Laptops produzieren x3.", cost: 2500, req: () => getLevel(state.minerLevels, "m_01") >= 10 },
+      { id: "t_click_1", name: "Diamant-Kontakte", icon: "🖱️", desc: "Verdoppelt gesamte Klick-Kraft (x2).", cost: 18000, req: () => state.totalClicks >= 120 },
+      { id: "t_rig", name: "Flüssigstickstoff-Kühlung", icon: "🎮", desc: "Raspi-Cluster & RTX-Rigs produzieren x3,5.", cost: 6e5, req: () => getLevel(state.minerLevels, "m_04") >= 5 },
+      { id: "t_offline_1", name: "Standby-Protokoll", icon: "🌙", desc: "Offline-Effizienz steigt von 50 % auf 80 %.", cost: 1.5e6, req: () => state.runBtc.gte(2e5) },
+      { id: "t_market", name: "Insider-Terminal", icon: "📈", desc: "Markt-Multiplikator fällt nie unter x1,0 und steigt bis x3,0.", cost: 1.2e7, req: () => state.runBtc.gte(2e6) },
+      { id: "t_asic", name: "Kryo-ASIC-Tuning", icon: "⚙️", desc: "ASIC-Farmen & Lagerhallen produzieren x4.", cost: 4e8, req: () => getLevel(state.minerLevels, "m_06") >= 10 },
+      { id: "t_skills_cd", name: "Kühlmittel-Kreislauf", icon: "⚡", desc: "Senkt alle Skill-Abklingzeiten um 30 %.", cost: 2.5e9, req: () => state.runBtc.gte(3e8) },
+      { id: "t_gold_mag", name: "Gold-Magnet-Sensor", icon: "✨", desc: "Goldene Bitcoins bleiben 22s und geben +50 % mehr.", cost: 1.5e10, req: () => state.goldenClicked >= 1 },
+      { id: "t_synergy_1", name: "Rig-Cluster-Synergie", icon: "🔗", desc: "Alle Miner erhalten +2 % pro RTX-Gaming-Rig-Level.", cost: 1.2e11, req: () => getLevel(state.minerLevels, "m_04") >= 25 },
+      { id: "t_geo", name: "Tektonik-Anzapfung", icon: "🌋", desc: "Island-, Wasser- & Geothermie-Anlagen x4.", cost: 8e13, req: () => getLevel(state.minerLevels, "m_10") >= 10 },
+      { id: "t_offline_2", name: "Quanten-Standby", icon: "🛸", desc: "Offline-Effizienz steigt auf volle 120 %!", cost: 5e15, req: () => getLevel(state.researchOwned, "t_offline_1") > 0 },
+      { id: "t_space", name: "Solare Supraleitung", icon: "🛰️", desc: "Alle Weltraum- & Planeten-Miner (Tier 13–17) x5.", cost: 2e19, req: () => getLevel(state.minerLevels, "m_13") >= 10 },
+      { id: "t_crit_op", name: "Kaskaden-Krits", icon: "💥", desc: "Kritische Treffer sind zusätzlich 2,5x stärker.", cost: 8e22, req: () => state.totalCrits >= 500 },
+      { id: "t_quantum", name: "Verschränkungs-Bus", icon: "⚛️", desc: "Quanten-, Fusions- & Dyson-Miner (Tier 18–22) x6.", cost: 5e28, req: () => getLevel(state.minerLevels, "m_18") >= 10 },
+      { id: "t_cosmic", name: "Ereignishorizont-Matrix", icon: "🕳️", desc: "Schwarzes Loch bis Kardaschow-Netz (Tier 23–26) x8.", cost: 4e36, req: () => getLevel(state.minerLevels, "m_23") >= 5 },
+      { id: "t_omni", name: "Chronos-Synthese", icon: "👑", desc: "Zeitkristall bis Omniversum-Architekt & Endlos-Tiers x10.", cost: 2e43, req: () => getLevel(state.minerLevels, "m_27") >= 5 },
+      { id: "t_all_1", name: "Globales Mesh-Protokoll", icon: "🌐", desc: "Gesamte Produktion (BPS & Klicks) x3.", cost: 1e20, req: () => state.runBtc.gte(1e18) },
+      { id: "t_all_2", name: "Hyper-Ledger-Singularität", icon: "💠", desc: "Gesamte Produktion (BPS & Klicks) x5.", cost: 1e34, req: () => state.runBtc.gte(1e31) }
+    ];
+
+    /* 7. 30 ERFOLGE (Jeder +4% multiplikativ auf Alles!) */
+    const ACHIEVEMENTS = [
+      { id: "a01", name: "Erster Hash", icon: "🪙", desc: "Klicke zum ersten Mal auf den Bitcoin.", check: () => state.totalClicks >= 1 },
+      { id: "a02", name: "Klick-Anfänger", icon: "👆", desc: "Erreiche 500 Gesamtklicks.", check: () => state.totalClicks >= 500 },
+      { id: "a03", name: "Klick-Maschine", icon: "⚡", desc: "Erreiche 5.000 Gesamtklicks.", check: () => state.totalClicks >= 5000 },
+      { id: "a04", name: "Klick-Legende", icon: "🔥", desc: "Erreiche 25.000 Gesamtklicks.", check: () => state.totalClicks >= 25000 },
+      { id: "a05", name: "Volltreffer!", icon: "🎯", desc: "Lande 100 Kritische Klicks.", check: () => state.totalCrits >= 100 },
+      { id: "a06", name: "Krit-Sturm", icon: "💥", desc: "Lande 2.500 Kritische Klicks.", check: () => state.totalCrits >= 2500 },
+      { id: "a07", name: "Combo-Meister", icon: "🏎️", desc: "Erreiche den maximalen 5.00x Combo-Multiplikator.", check: () => state.comboValue >= 99 },
+      { id: "a08", name: "Goldsucher", icon: "✨", desc: "Fange 1 Goldenen Bitcoin.", check: () => state.goldenClicked >= 1 },
+      { id: "a09", name: "Goldrausch", icon: "🌟", desc: "Fange 15 Goldene Bitcoins.", check: () => state.goldenClicked >= 15 },
+      { id: "a10", name: "Gold-Tycoon", icon: "🏆", desc: "Fange 75 Goldene Bitcoins.", check: () => state.goldenClicked >= 75 },
+      { id: "a11", name: "Erster Miner", icon: "🔌", desc: "Besitze mindestens 25 USB-Stick Miner.", check: () => getLevel(state.minerLevels, "m_01") >= 25 },
+      { id: "a12", name: "Meilenstein-Jäger", icon: "📈", desc: "Bringe ein beliebiges Upgrade auf Lv. 100.", check: () => Object.values(state.minerLevels).some(v => v >= 100) || Object.values(state.clickLevels).some(v => v >= 100) },
+      { id: "a13", name: "Millionär", icon: "💵", desc: "Besitze 1.00 M BTC gleichzeitig.", check: () => state.btc.gte(1e6) },
+      { id: "a14", name: "Milliardär", icon: "💰", desc: "Erreiche 1.00 B Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte(1e9) },
+      { id: "a15", name: "Trillionär", icon: "🏦", desc: "Erreiche 1.00 T Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte(1e12) },
+      { id: "a16", name: "Quadrillionär", icon: "💎", desc: "Erreiche 1.00 Qa Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte(1e15) },
+      { id: "a17", name: "Sextillionär", icon: "🚀", desc: "Erreiche 1.00 Sx Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte(1e21) },
+      { id: "a18", name: "Decillionär", icon: "🌌", desc: "Erreiche 1.00 Dc Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte(1e33) },
+      { id: "a19", name: "Jenseits von Googol", icon: "♾️", desc: "Erreiche 1.00e100 Lebenszeit-BTC.", check: () => state.lifetimeBtc.gte("1e100") },
+      { id: "a20", name: "Wiedergeburt", icon: "♻️", desc: "Führe deinen ersten Rebirth aus.", check: () => state.rebirthCount >= 1 },
+      { id: "a21", name: "Rebirth-Veteran", icon: "🔄", desc: "Führe 10 Rebirths aus.", check: () => state.rebirthCount >= 10 },
+      { id: "a22", name: "Rebirth-Meister", icon: "🌀", desc: "Führe 50 Rebirths aus.", check: () => state.rebirthCount >= 50 },
+      { id: "a23", name: "Aufgestiegen", icon: "✦", desc: "Führe deine erste Ascension aus.", check: () => state.ascensionCount >= 1 },
+      { id: "a24", name: "Dimensions-Wanderer", icon: "🌠", desc: "Führe 5 Ascensions aus.", check: () => state.ascensionCount >= 5 },
+      { id: "a25", name: "Transzendent", icon: "⚛️", desc: "Führe deine erste Transzendenz aus.", check: () => state.transcendCount >= 1 },
+      { id: "a26", name: "Forschergeist", icon: "🔬", desc: "Schalte 8 Technologien in einem Run frei.", check: () => Object.keys(state.researchOwned).length >= 8 },
+      { id: "a27", name: "Auftrags-Profi", icon: "🎯", desc: "Schließe 10 Live-Aufträge ab.", check: () => state.missionsCompleted >= 10 },
+      { id: "a28", name: "Mond-Kolonie", icon: "🌑", desc: "Kaufe eine Mondkrater-Mining-Basis.", check: () => getLevel(state.minerLevels, "m_14") >= 1 },
+      { id: "a29", name: "Dyson-Erbauer", icon: "☀️", desc: "Baue eine vollständige Dyson-Sphäre.", check: () => getLevel(state.minerLevels, "m_21") >= 1 },
+      { id: "a30", name: "Endlos-Pionier", icon: "🔮", desc: "Erreiche das erste prozedurale Endlos-Tier (Mk. II).", check: () => MINERS.length > 30 && getLevel(state.minerLevels, "m_proc_0") >= 1 }
+    ];
+
+    /* 8. 3-STUFIGE PRESTIGE-SHOPS */
+    function getDiscountFraction(lvl) { return lvl <= 0 ? 0 : Math.min(0.9, 0.9 * (1 - Math.pow(0.76, lvl))); }
+    const REBIRTH_SHOP = [
+      { id: "r_start_btc", name: "Start-Kapital", icon: "💼", desc: "Starte jeden Rebirth sofort mit Startguthaben.", baseCost: 2, costRate: 3.5, maxLevel: Infinity, effectText: (l) => l === 0 ? "0 BTC" : `${formatBN(BN.from(15000).mul(BN.from(25).pow(l - 1)))} Start-BTC` },
+      { id: "r_autobuyer", name: "Auto-Buyer", icon: "🤖", desc: "Kauft normale Upgrades automatisch (an-/abschaltbar).", baseCost: 8, costRate: 4.5, maxLevel: 12, effectText: (l) => l === 0 ? "Gesperrt" : `Aktiv (Stufe ${l})` },
+      { id: "r_click_mult", name: "Permanenter Klick-Multi", icon: "👆", desc: "Multipliziert Klick-Kraft um x1,75 pro Level.", baseCost: 3, costRate: 2.9, maxLevel: Infinity, effectText: (l) => `x${formatBN(BN.from(1.75).pow(l))} Klick-Power` },
+      { id: "r_discount", name: "Upgrade-Rabatt", icon: "🏷️", desc: "Senkt normale Upgrade-Kosten um bis zu -90 %.", baseCost: 5, costRate: 3.0, maxLevel: 14, effectText: (l) => `-${(getDiscountFraction(l) * 100).toFixed(1)}% Kosten` },
+      { id: "r_golden_rate", name: "Gold-Bitcoin-Rate", icon: "✨", desc: "Goldene Bitcoins spawnen öfter & geben mehr.", baseCost: 4, costRate: 2.8, maxLevel: 15, effectText: (l) => `Spawn -${Math.min(60, l * 4)}% | +${l * 15}%` },
+      { id: "r_bps_mult", name: "Permanenter BPS-Multi", icon: "🏭", desc: "Multipliziert alle Miner-BPS um x1,75 pro Level.", baseCost: 3, costRate: 2.9, maxLevel: Infinity, effectText: (l) => `x${formatBN(BN.from(1.75).pow(l))} Miner-BPS` },
+      { id: "r_rt_boost", name: "Token-Verstärker", icon: "♻️", desc: "Erhöht verdiente Rebirth-Tokens um +40 %/Level.", baseCost: 12, costRate: 3.5, maxLevel: Infinity, effectText: (l) => `x${(1 + l * 0.4).toFixed(1)} RT-Gewinn` },
+      { id: "r_auto_res", name: "Auto-Forschung", icon: "🔬", desc: "Kauft automatisch erschwingliche Technologien.", baseCost: 45, costRate: 5, maxLevel: 1, effectText: (l) => l > 0 ? "Aktiv" : "Gesperrt" }
+    ];
+
+    const ASCENSION_SHOP = [
+      { id: "a_singularity", name: "Satoshi-Singularität", icon: "💎", desc: "Multipliziert ALLES (Klicks & BPS) um x12 pro Level!", baseCost: 1, costRate: 3.5, maxLevel: Infinity, effectText: (l) => `x${formatBN(BN.from(12).pow(l))} auf Alles` },
+      { id: "a_autorebirth", name: "Auto-Rebirth", icon: "⚡", desc: "Löst Rebirth automatisch ab Ziel-RT aus.", baseCost: 2, costRate: 5, maxLevel: 1, effectText: (l) => l > 0 ? "Freigeschaltet" : "Gesperrt" },
+      { id: "a_milestone_boost", name: "Ewiger Meilenstein-Booster", icon: "📈", desc: "Steigert den 25er-Meilenstein-Faktor um +0,5x/Level.", baseCost: 3, costRate: 4.5, maxLevel: 6, effectText: (l) => `Meilenstein: x${2 + l * 0.5}` },
+      { id: "a_crystal_start", name: "Kristall-Erbe", icon: "🏦", desc: "Starte nach Ascension mit Start-RT & Auto-Buyer!", baseCost: 2, costRate: 4.2, maxLevel: 12, effectText: (l) => l === 0 ? "Kein Start-RT" : `${formatBN(BN.from(25).mul(BN.from(12).pow(l - 1)))} Start-RT` },
+      { id: "a_crystal_gain", name: "Kristall-Resonanz", icon: "💠", desc: "Erhöht gewonnene Satoshi-Kristalle um +50 %/Level.", baseCost: 6, costRate: 4.5, maxLevel: Infinity, effectText: (l) => `x${(1 + l * 0.5).toFixed(1)} 💎 Gewinn` }
+    ];
+
+    const TRANS_SHOP = [
+      { id: "g_cosmic_exp", name: "Kosmischer Multiplikator", icon: "⚛️", desc: "Multipliziert ALLES um x1.000 pro Level!", baseCost: 1, costRate: 4, maxLevel: Infinity, effectText: (l) => `x${formatBN(BN.from(1000).pow(l))} auf Alles` },
+      { id: "g_keep_res", name: "Ewiges Wissen", icon: "📚", desc: "Behalte alle Technologien dauerhaft über Rebirths!", baseCost: 2, costRate: 5, maxLevel: 1, effectText: (l) => l > 0 ? "Aktiv" : "Gesperrt" },
+      { id: "g_super_ms", name: "100er-Hyper-Meilenstein", icon: "🌟", desc: "Verstärkt den x5-Bonus alle 100 Level weiter.", baseCost: 3, costRate: 4, maxLevel: 10, effectText: (l) => `100er-Bonus: x${5 + l * 5}` },
+      { id: "g_auto_asc", name: "Auto-Ascension", icon: "♾️", desc: "Führt Ascension automatisch ab 10x aktuellem Ziel durch.", baseCost: 5, costRate: 6, maxLevel: 1, effectText: (l) => l > 0 ? "Freigeschaltet" : "Gesperrt" }
+    ];
+
+    /* 9. STATE & PERSISTENZ */
+    const SAVE_KEY = "btc_clicker_save_v2", PANIC_KEY = "btc_clicker_panic_v1", CHECKSUM_SALT = "BP_V2_CHK_7721";
+    let state = null, isPanicActive = false, isAdminUnlocked = false;
+    let panicSettings = { imageData: "", imageUrl: "", fit: "cover", tabTitle: DEFAULT_PANIC_TITLE };
+    const originalTitle = "BitPulse — Endlos-Bitcoin-Clicker";
+
+    function createFreshState() {
+      initBaseMiners();
+      return {
+        version: 2, btc: BN.ZERO, runBtc: BN.ZERO, lifetimeBtc: BN.ZERO,
+        rt: BN.ZERO, totalRtInAsc: BN.ZERO, crystals: BN.ZERO, genesis: BN.ZERO,
+        clickLevels: {}, minerLevels: {}, rebirthLevels: {}, ascensionLevels: {}, transLevels: {},
+        researchOwned: {}, achievements: {},
+        buyMode: "1", miningMode: "balanced", autoBuyerOn: true, autoRebirthOn: false, autoRebirthTarget: "1000",
+        autoAscOn: false, adminMult: BN.ONE, audioOn: true,
+        totalClicks: 0, totalCrits: 0, goldenClicked: 0, rebirthCount: 0, ascensionCount: 0, transcendCount: 0,
+        frenzyRemaining: 0, comboValue: 0, comboHoldTimer: 0,
+        skills: { ocActive: 0, ocCd: 0, blkCd: 0, cmbActive: 0, cmbCd: 0 },
+        mission: { type: "clicks", target: 50, progress: 0, tier: 1 }, missionsCompleted: 0,
+        lastSaveTime: Date.now(), createdAt: Date.now()
+      };
+    }
+
+    /* 10. LIVE MARKT SIMULATION */
+    const market = { price: 68500, mult: 1.0, history: Array.from({ length: 24 }, () => 68500), timer: 0 };
+    function updateMarket(dt) {
+      market.timer += dt;
+      if (market.timer < 3.0) return;
+      market.timer = 0;
+      const drift = (Math.random() - 0.485) * 0.085;
+      market.price = Math.max(32000, Math.min(240000, market.price * (1 + drift)));
+      market.history.push(market.price);
+      if (market.history.length > 24) market.history.shift();
+      const hasInsider = getLevel(state.researchOwned, "t_market") > 0;
+      const rawMult = market.price / 68500;
+      market.mult = hasInsider ? Math.min(3.0, Math.max(1.0, rawMult)) : Math.min(2.4, Math.max(0.7, rawMult));
+    }
+
+    /* 11. MATHEMATIK & FORMELN */
+    const getLevel = (map, id) => (map && map[id]) ? map[id] : 0;
+    const getMilestoneFactor = () => 2 + getLevel(state.ascensionLevels, "a_milestone_boost") * 0.5;
+    function getMilestoneMult(lvl) {
+      const t25 = Math.floor(lvl / 25);
+      const t100 = Math.floor(lvl / 100);
+      let m = t25 <= 0 ? BN.ONE : BN.from(getMilestoneFactor()).pow(t25);
+      if (t100 > 0) m = m.mul(BN.from(5 + getLevel(state.transLevels, "g_super_ms") * 5).pow(t100));
+      return m;
+    }
+    const getDiscountMult = () => Math.max(0.1, 1 - getDiscountFraction(getLevel(state.rebirthLevels, "r_discount")));
+    const seriesCost = (c0, rate, count) => count <= 0 ? BN.ZERO : (count === 1 ? c0 : c0.mul(BN.from(rate).pow(count).sub(1)).div(rate - 1));
+
+    function getMaxAffordable(budget, baseCost, rate, currentLvl, discountMult, maxLvl = Infinity) {
+      const cap = Number.isFinite(maxLvl) ? Math.max(0, maxLvl - currentLvl) : Infinity;
+      if (cap <= 0) return 0;
+      const c0 = BN.from(baseCost).mul(BN.from(rate).pow(currentLvl)).mul(discountMult);
+      if (budget.lt(c0)) return 0;
+      let n = Math.floor(budget.div(c0).mul(rate - 1).add(1).log10() / Math.log10(rate));
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      n = Math.min(n, 1e8, cap);
+      if (n < cap && seriesCost(c0, rate, n + 1).lte(budget)) n++;
+      while (n > 0 && seriesCost(c0, rate, n).gt(budget)) n--;
+      return n;
+    }
+
+    function getUpgradeBuyInfo(def, currentLvl, isNormal, poolKey = "rt") {
+      const disc = isNormal ? getDiscountMult() : 1, maxLvl = def.maxLevel ?? Infinity;
+      if (currentLvl >= maxLvl) return { count: 0, cost: BN.ZERO, maxed: true };
+      const c0 = BN.from(def.baseCost).mul(BN.from(def.costRate).pow(currentLvl)).mul(disc);
+      const budget = isNormal ? state.btc : state[poolKey];
+      let count = 1;
+      if (isNormal && state.buyMode === "10") count = Math.min(10, maxLvl - currentLvl);
+      else if (isNormal && state.buyMode === "max") count = Math.max(1, getMaxAffordable(budget, def.baseCost, def.costRate, currentLvl, disc, maxLvl));
+      const cost = seriesCost(c0, def.costRate, count);
+      return { count, cost, maxed: false, canAfford: budget.gte(cost) && count > 0 };
+    }
+
+    const getComboMultiplier = () => 1 + (Math.min(100, Math.max(0, state.comboValue)) / 100) * 4;
+    const getAchievementMult = () => BN.from(1.04).pow(Object.keys(state.achievements).length);
+
+    function getGlobalAllMultiplier() {
+      const rtBonus = state.totalRtInAsc.mul(0.03).add(1);
+      const singMult = BN.from(12).pow(getLevel(state.ascensionLevels, "a_singularity"));
+      const genMult = BN.from(1000).pow(getLevel(state.transLevels, "g_cosmic_exp"));
+      const frenzyMult = state.frenzyRemaining > 0 ? 7 : 1;
+      const ocMult = state.skills.ocActive > 0 ? 3 : 1;
+      const resAll = (getLevel(state.researchOwned, "t_all_1") ? 3 : 1) * (getLevel(state.researchOwned, "t_all_2") ? 5 : 1);
+      const adminMult = state.adminMult && state.adminMult.gt(0) ? state.adminMult : BN.ONE;
+      return rtBonus.mul(singMult).mul(genMult).mul(frenzyMult).mul(ocMult).mul(resAll).mul(market.mult).mul(getAchievementMult()).mul(adminMult);
+    }
+
+    function getMinerTechMult(minerId) {
+      let m = 1;
+      const idx = parseInt(minerId.replace("m_", ""), 10);
+      if (getLevel(state.researchOwned, "t_usb") && (minerId === "m_01" || minerId === "m_02")) m *= 3;
+      if (getLevel(state.researchOwned, "t_rig") && (minerId === "m_03" || minerId === "m_04")) m *= 3.5;
+      if (getLevel(state.researchOwned, "t_asic") && (minerId === "m_06" || minerId === "m_07")) m *= 4;
+      if (getLevel(state.researchOwned, "t_geo") && idx >= 8 && idx <= 10) m *= 4;
+      if (getLevel(state.researchOwned, "t_space") && idx >= 13 && idx <= 17) m *= 5;
+      if (getLevel(state.researchOwned, "t_quantum") && idx >= 18 && idx <= 22) m *= 6;
+      if (getLevel(state.researchOwned, "t_cosmic") && idx >= 23 && idx <= 26) m *= 8;
+      if (getLevel(state.researchOwned, "t_omni") && (idx >= 27 || minerId.startsWith("m_proc_"))) m *= 10;
+      if (getLevel(state.researchOwned, "t_synergy_1")) m *= (1 + getLevel(state.minerLevels, "m_04") * 0.02);
+      return m;
+    }
+
+    function getMinerBps(m, lvl) {
+      if (lvl <= 0) return BN.ZERO;
+      return m.baseBps.mul(lvl).mul(getMilestoneMult(lvl)).mul(getMinerTechMult(m.id));
+    }
+
+    function getTotalBps() {
+      let sum = BN.ZERO;
+      for (const m of MINERS) { const l = getLevel(state.minerLevels, m.id); if (l > 0) sum = sum.add(getMinerBps(m, l)); }
+      const modeMult = state.miningMode === "overclock" ? 1.45 : (state.miningMode === "sniper" ? 0.80 : 1.0);
+      return sum.mul(BN.from(1.75).pow(getLevel(state.rebirthLevels, "r_bps_mult"))).mul(modeMult).mul(getGlobalAllMultiplier());
+    }
+
+    function getBaseClickPower(totalBps) {
+      const m1 = getLevel(state.clickLevels, "c_mouse"), m2 = getLevel(state.clickLevels, "c_macro"), m3 = getLevel(state.clickLevels, "c_mech");
+      const baseFlat = BN.ONE
+        .add(BN.from(m1).mul(getMilestoneMult(m1)))
+        .add(BN.from(m2 * 10).mul(getMilestoneMult(m2)))
+        .add(BN.from(m3 * 150).mul(getMilestoneMult(m3)));
+      const bpsShare = totalBps.mul(getLevel(state.clickLevels, "c_bps_pct") * 0.008);
+      const hyp = getLevel(state.clickLevels, "c_hyper_mult"), amp = getLevel(state.clickLevels, "c_skill_amp");
+      const hyperMult = BN.from(1.35).pow(hyp).mul(getMilestoneMult(hyp)).mul(BN.from(1.45).pow(amp)).mul(getMilestoneMult(amp));
+      const rebClickMult = BN.from(1.75).pow(getLevel(state.rebirthLevels, "r_click_mult"));
+      const techClick = getLevel(state.researchOwned, "t_click_1") ? 2 : 1;
+      const modeMult = state.miningMode === "sniper" ? 1.65 : (state.miningMode === "overclock" ? 0.75 : 1.0);
+      return baseFlat.mul(hyperMult).mul(rebClickMult).mul(techClick).mul(modeMult).mul(getGlobalAllMultiplier()).add(bpsShare);
+    }
+    const getClickPowerWithCombo = (bps) => getBaseClickPower(bps).mul(getComboMultiplier());
+    const getCritChance = () => Math.min(0.75, 0.06 + getLevel(state.clickLevels, "c_crit_chance") * 0.015);
+    const getCritMult = () => (3 + getLevel(state.clickLevels, "c_crit_mult") * 0.75) * (getLevel(state.researchOwned, "t_crit_op") ? 2.5 : 1);
+
+    function getPendingRT() {
+      if (state.runBtc.lt(1e9)) return BN.ZERO;
+      return state.runBtc.div(1e9).pow(0.32).mul(3).mul(1 + getLevel(state.rebirthLevels, "r_rt_boost") * 0.4).floor();
+    }
+    function getPendingCrystals() {
+      if (state.rt.lt(1e6)) return BN.ZERO;
+      return state.rt.div(1e6).pow(0.45).mul(1 + getLevel(state.ascensionLevels, "a_crystal_gain") * 0.5).floor().max(1);
+    }
+    function getPendingGenesis() {
+      if (state.crystals.lt(1e5)) return BN.ZERO;
+      return state.crystals.div(1e5).pow(0.4).floor().max(1);
+    }
+
+    /* 12. KAUF, FORSCHUNG, ERFOLGE, SKILLS & AUFTRÄGE */
+    function checkDynamicTierExpansion() {
+      let highest = -1;
+      for (let i = MINERS.length - 1; i >= 0; i--) if (getLevel(state.minerLevels, MINERS[i].id) > 0) { highest = i; break; }
+      if (highest >= MINERS.length - 3 || state.btc.gte(MINERS[MINERS.length - 2].baseCost.mul(0.25))) {
+        const before = MINERS.length;
+        ensureProceduralMiners(MINERS.length + 3);
+        if (MINERS.length !== before) renderMinerList();
+      }
+    }
+
+    function advanceMission(type, amount = 1) {
+      if (state.mission.type !== type) return;
+      state.mission.progress += amount;
+      if (state.mission.progress >= state.mission.target) {
+        state.missionsCompleted++;
+        const bps = getTotalBps(), reward = bps.mul(90).max(getClickPowerWithCombo(bps).mul(60));
+        state.btc = state.btc.add(reward); state.runBtc = state.runBtc.add(reward); state.lifetimeBtc = state.lifetimeBtc.add(reward);
+        showToast(`🎯 Auftrag erledigt! +${formatBN(reward)} BTC Belohnung!`);
+        Sound.milestone();
+        const tier = state.missionsCompleted + 1;
+        const pool = [
+          { type: "clicks", target: Math.round(50 * Math.pow(1.22, Math.min(30, tier))) },
+          { type: "buys", target: Math.round(15 * Math.pow(1.15, Math.min(30, tier))) },
+          { type: "crits", target: Math.round(8 * Math.pow(1.18, Math.min(25, tier))) }
+        ];
+        const next = pool[tier % pool.length];
+        state.mission = { type: next.type, target: next.target, progress: 0, tier };
+      }
+    }
+
+    function checkAchievements() {
+      let unlockedNow = false;
+      for (const a of ACHIEVEMENTS) {
+        if (!state.achievements[a.id] && a.check()) {
+          state.achievements[a.id] = true;
+          unlockedNow = true;
+          Sound.milestone();
+          showToast(`🏆 Erfolg freigeschaltet: ${a.name} (+4% auf Alles!)`);
+        }
+      }
+      if (unlockedNow && document.getElementById("modal-achievements").classList.contains("open")) renderAchievementsModal();
+    }
+
+    function buyNormalUpgrade(kind, id) {
+      const list = kind === "click" ? CLICK_UPGRADES : MINERS, map = kind === "click" ? state.clickLevels : state.minerLevels;
+      const def = list.find(u => u.id === id);
+      if (!def) return false;
+      const cur = getLevel(map, id), info = getUpgradeBuyInfo(def, cur, true);
+      if (info.maxed || !info.canAfford) return false;
+      state.btc = state.btc.sub(info.cost).max(0);
+      const nextLvl = cur + info.count;
+      map[id] = nextLvl;
+      advanceMission("buys", info.count);
+      if ((def.milestone || kind === "miner") && Math.floor(nextLvl / 25) > Math.floor(cur / 25)) {
+        Sound.milestone(); showToast(`🏆 Meilenstein! ${def.name} Lv. ${nextLvl} — Output vervielfacht!`);
+      } else Sound.buy();
+      if (kind === "miner") checkDynamicTierExpansion();
+      return true;
+    }
+
+    function buyResearch(id) {
+      const def = RESEARCH_LIST.find(r => r.id === id);
+      if (!def || state.researchOwned[id] || !def.req() || state.btc.lt(def.cost)) return false;
+      state.btc = state.btc.sub(def.cost).max(0);
+      state.researchOwned[id] = 1;
+      Sound.milestone();
+      showToast(`🔬 Erforscht: ${def.name}!`);
+      if (document.getElementById("modal-research").classList.contains("open")) renderResearchModal();
+      updateUI();
+      return true;
+    }
+
+    function buyPrestigeUpgrade(kind, id) {
+      const cfg = kind === "rebirth"
+        ? { list: REBIRTH_SHOP, map: state.rebirthLevels, key: "rt" }
+        : (kind === "ascension" ? { list: ASCENSION_SHOP, map: state.ascensionLevels, key: "crystals" } : { list: TRANS_SHOP, map: state.transLevels, key: "genesis" });
+      const def = cfg.list.find(u => u.id === id);
+      if (!def) return false;
+      const cur = getLevel(cfg.map, id), info = getUpgradeBuyInfo(def, cur, false, cfg.key);
+      if (info.maxed || !info.canAfford) return false;
+      state[cfg.key] = state[cfg.key].sub(info.cost).max(0);
+      cfg.map[id] = cur + 1;
+      Sound.buy(); renderPrestigeModals(); updateUI(); saveGame();
+      return true;
+    }
+
+    function applyRebirthStartBonuses() {
+      const startLvl = getLevel(state.rebirthLevels, "r_start_btc");
+      if (startLvl > 0) {
+        const sBtc = BN.from(15000).mul(BN.from(25).pow(startLvl - 1));
+        state.btc = state.btc.add(sBtc); state.runBtc = state.runBtc.add(sBtc);
+      }
+    }
+
+    function performRebirth(silent = false) {
+      const gained = getPendingRT();
+      if (gained.lte(0)) { if (!silent) showToast("Mindestens 1.00 B Run-BTC nötig für Rebirth!"); return false; }
+      state.rt = state.rt.add(gained); state.totalRtInAsc = state.totalRtInAsc.add(gained); state.rebirthCount++;
+      state.btc = BN.ZERO; state.runBtc = BN.ZERO; state.clickLevels = {}; state.minerLevels = {};
+      if (!getLevel(state.transLevels, "g_keep_res")) state.researchOwned = {};
+      state.comboValue = 0; state.frenzyRemaining = 0; initBaseMiners(); applyRebirthStartBonuses();
+      Sound.prestige(); showToast(`♻️ Rebirth! +${formatBN(gained, true)} Rebirth-Tokens erhalten.`);
+      renderAllLists(); renderPrestigeModals(); updateUI(); saveGame();
+      return true;
+    }
+
+    function performAscension(silent = false) {
+      const gained = getPendingCrystals();
+      if (state.rt.lt(1e6) || gained.lte(0)) { if (!silent) showToast("Mindestens 1.00 M Rebirth-Tokens nötig für Ascension!"); return false; }
+      state.crystals = state.crystals.add(gained); state.ascensionCount++;
+      state.btc = BN.ZERO; state.runBtc = BN.ZERO; state.rt = BN.ZERO; state.totalRtInAsc = BN.ZERO;
+      state.clickLevels = {}; state.minerLevels = {}; state.rebirthLevels = {};
+      if (!getLevel(state.transLevels, "g_keep_res")) state.researchOwned = {};
+      state.comboValue = 0; state.frenzyRemaining = 0; initBaseMiners();
+      const herLvl = getLevel(state.ascensionLevels, "a_crystal_start");
+      if (herLvl > 0) {
+        const sRt = BN.from(25).mul(BN.from(12).pow(herLvl - 1));
+        state.rt = sRt; state.totalRtInAsc = sRt; state.rebirthLevels.r_autobuyer = 1;
+      }
+      Sound.prestige(); showToast(`✦ Ascension abgeschlossen! +${formatBN(gained, true)} Satoshi-Kristalle!`);
+      renderAllLists(); renderPrestigeModals(); updateUI(); saveGame();
+      return true;
+    }
+
+    function performTranscend() {
+      const gained = getPendingGenesis();
+      if (state.crystals.lt(1e5) || gained.lte(0)) { showToast("Mindestens 100.00 K Satoshi-Kristalle nötig!"); return false; }
+      state.genesis = state.genesis.add(gained); state.transcendCount++;
+      state.btc = BN.ZERO; state.runBtc = BN.ZERO; state.rt = BN.ZERO; state.totalRtInAsc = BN.ZERO; state.crystals = BN.ZERO;
+      state.clickLevels = {}; state.minerLevels = {}; state.rebirthLevels = {}; state.ascensionLevels = {};
+      if (!getLevel(state.transLevels, "g_keep_res")) state.researchOwned = {};
+      state.comboValue = 0; state.frenzyRemaining = 0; initBaseMiners();
+      Sound.prestige(); showToast(`⚛️ Transzendenz! +${formatBN(gained, true)} Genesis-Kerne erschaffen!`);
+      renderAllLists(); renderPrestigeModals(); updateUI(); saveGame();
+      return true;
+    }
+
+    /* 13. AKTIVE SKILLS, KLICK, PARTIKEL & GOLDENE BITCOINS */
+    const getSkillCdMult = () => getLevel(state.researchOwned, "t_skills_cd") ? 0.7 : 1.0;
+    document.getElementById("skill-overclock").addEventListener("click", () => {
+      if (state.skills.ocCd > 0) return;
+      state.skills.ocActive = 30; state.skills.ocCd = Math.round(120 * getSkillCdMult());
+      Sound.frenzy(); showToast("⚡ Overclock aktiv: x3 Produktion für 30 Sekunden!"); updateUI();
+    });
+    document.getElementById("skill-block").addEventListener("click", () => {
+      if (state.skills.blkCd > 0) return;
+      state.skills.blkCd = Math.round(90 * getSkillCdMult());
+      const bps = getTotalBps(), amp = BN.from(1.45).pow(getLevel(state.clickLevels, "c_skill_amp"));
+      const reward = bps.mul(180).max(getClickPowerWithCombo(bps).mul(150)).mul(amp);
+      state.btc = state.btc.add(reward); state.runBtc = state.runBtc.add(reward); state.lifetimeBtc = state.lifetimeBtc.add(reward);
+      Sound.milestone(); showToast(`🔨 Block geschürft! +${formatBN(reward)} BTC!`); updateUI();
+    });
+    document.getElementById("skill-combo").addEventListener("click", () => {
+      if (state.skills.cmbCd > 0) return;
+      state.comboValue = 100; state.comboHoldTimer = 20; state.skills.cmbActive = 20; state.skills.cmbCd = Math.round(150 * getSkillCdMult());
+      Sound.frenzy(); showToast("🔥 Hyper-Combo: x5.00 für 20 Sekunden eingefroren!"); updateUI();
+    });
+
+    const fxLayer = document.getElementById("fx-layer"), btcButton = document.getElementById("btc-button"), coinStage = document.getElementById("coin-stage");
+    function spawnFloatingText(x, y, text, isCrit = false) {
+      if (isPanicActive) return;
+      const el = document.createElement("div"); el.className = "float-num tabular" + (isCrit ? " crit" : "");
+      el.textContent = text; el.style.left = x + "px"; el.style.top = y + "px";
+      fxLayer.appendChild(el); setTimeout(() => el.remove(), 950);
+    }
+    function spawnSparks(x, y, count = 7, isCrit = false) {
+      if (isPanicActive) return;
+      for (let i = 0; i < count; i++) {
+        const sp = document.createElement("div"), ang = (Math.PI * 2 * i) / count + Math.random() * 0.5, d = 34 + Math.random() * 52;
+        sp.className = "spark"; sp.style.left = x + "px"; sp.style.top = y + "px";
+        sp.style.setProperty("--dx", `${Math.cos(ang) * d}px`); sp.style.setProperty("--dy", `${Math.sin(ang) * d}px`);
+        if (isCrit) { sp.style.background = "#fb7185"; sp.style.boxShadow = "0 0 10px #fb7185"; }
+        fxLayer.appendChild(sp); setTimeout(() => sp.remove(), 620);
+      }
+    }
+    function executeClick(x, y, isAuto = false) {
+      let gain = getClickPowerWithCombo(getTotalBps());
+      const isCrit = Math.random() < getCritChance();
+      if (isCrit) { gain = gain.mul(getCritMult()); state.totalCrits++; advanceMission("crits", 1); }
+      state.btc = state.btc.add(gain); state.runBtc = state.runBtc.add(gain); state.lifetimeBtc = state.lifetimeBtc.add(gain); state.totalClicks++;
+      advanceMission("clicks", 1);
+      if (!isAuto) {
+        state.comboValue = Math.min(100, state.comboValue + 10);
+        state.comboHoldTimer = Math.max(state.comboHoldTimer, 2.2 + getLevel(state.clickLevels, "c_combo_dur") * 0.4);
+        isCrit ? Sound.crit() : Sound.click(getComboMultiplier());
+        spawnFloatingText(x, y, (isCrit ? "KRIT! +" : "+") + formatBN(gain), isCrit);
+        spawnSparks(x, y, isCrit ? 12 : 6, isCrit);
+        if (!isPanicActive) { const r = document.createElement("div"); r.className = "coin-ripple"; coinStage.appendChild(r); setTimeout(() => r.remove(), 550); }
+      } else if (state.comboValue > 0) state.comboHoldTimer = Math.max(state.comboHoldTimer, 0.35);
+    }
+
+    btcButton.addEventListener("pointerdown", (e) => {
+      btcButton.classList.add("pressed");
+      const r = btcButton.getBoundingClientRect();
+      executeClick(e.clientX || (r.left + r.width / 2), e.clientY || (r.top + r.height / 2), false);
+      updateUI();
+    });
+    window.addEventListener("pointerup", () => btcButton.classList.remove("pressed"));
+
+    let nextGoldenIn = 55;
+    const getGoldenSpawnDelay = () => (45 + Math.random() * 45) * Math.max(0.4, 1 - getLevel(state.rebirthLevels, "r_golden_rate") * 0.04);
+    function spawnGoldenBitcoin() {
+      if (isPanicActive) return;
+      const coin = document.createElement("button");
+      coin.className = "golden-btc"; coin.textContent = "₿"; coin.title = "Goldener Bitcoin — Schnell klicken!";
+      coin.style.left = Math.max(64, Math.min(window.innerWidth - 80, 70 + Math.random() * (window.innerWidth - 150))) + "px";
+      coin.style.top = Math.max(72, Math.min(window.innerHeight - 80, 80 + Math.random() * (window.innerHeight - 170))) + "px";
+      let clicked = false;
+      const life = getLevel(state.researchOwned, "t_gold_mag") ? 22000 : 13000;
+      const despawn = setTimeout(() => { if (!clicked) coin.remove(); }, life);
+      coin.addEventListener("click", (ev) => {
+        if (clicked) return;
+        clicked = true; clearTimeout(despawn); coin.remove(); state.goldenClicked++; Sound.frenzy();
+        const bonusMult = (1 + getLevel(state.rebirthLevels, "r_golden_rate") * 0.15) * (getLevel(state.researchOwned, "t_gold_mag") ? 1.5 : 1);
+        if (Math.random() < 0.52) {
+          state.frenzyRemaining = 60;
+          showToast("✨ Goldener Bitcoin! 7x Frenzy-Boost für 60 Sekunden aktiviert!");
+        } else {
+          const bps = getTotalBps(), reward = bps.mul(600).max(getClickPowerWithCombo(bps).mul(120)).mul(bonusMult);
+          state.btc = state.btc.add(reward); state.runBtc = state.runBtc.add(reward); state.lifetimeBtc = state.lifetimeBtc.add(reward);
+          showToast(`✨ Goldener Bitcoin! +${formatBN(reward)} BTC (10 Min. BPS)!`);
+          spawnFloatingText(ev.clientX, ev.clientY, `+${formatBN(reward)} BTC!`, true);
+        }
+        spawnSparks(ev.clientX, ev.clientY, 18, true); updateUI();
+      });
+      document.body.appendChild(coin);
+    }
+
+    /* 14. TOASTS, MODALS & RENDERING */
+    function showToast(msg) {
+      if (isPanicActive) return;
+      const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
+      document.getElementById("toast-container").appendChild(el);
+      setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity 0.25s"; setTimeout(() => el.remove(), 260); }, 3600);
+    }
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+      if (id === "modal-rebirth" || id === "modal-ascension") renderPrestigeModals();
+      if (id === "modal-research") renderResearchModal();
+      if (id === "modal-achievements") renderAchievementsModal();
+      if (id === "modal-stats") renderStatsModal();
+      if (id === "modal-save") {
+        document.getElementById("save-export-text").value = generateExportString();
+        document.getElementById("save-export-status").textContent = "";
+        document.getElementById("save-import-status").textContent = "";
+      }
+      if (id === "modal-menu") syncPanicMenuUI();
+    }
+    const closeModal = (id) => document.getElementById(id).classList.remove("open");
+    document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.getAttribute("data-close"))));
+    document.querySelectorAll(".modal-backdrop").forEach(bd => bd.addEventListener("click", (e) => { if (e.target === bd) bd.classList.remove("open"); }));
+
+    function buildUpgradeCard(item, kind) {
+      const isClick = kind === "click", hasMs = !isClick || item.milestone;
+      const card = document.createElement("div"); card.className = "upg-card";
+      card.dataset[isClick ? "clickCard" : "minerCard"] = item.id;
+      card.innerHTML = `
+        <div class="upg-ident">
+          <div class="upg-icon ${isClick ? "click-icon" : ""}">${item.icon}</div>
+          <div>
+            <div class="upg-name-row"><span class="upg-name">${item.name}</span><span class="upg-lvl tabular" data-role="lvl">Lv. 0</span></div>
+            <div class="upg-desc">${item.desc}</div>
+          </div>
+        </div>
+        ${hasMs ? `<div class="milestone-wrap"><span class="tabular" data-role="ms-text">0/25</span><div class="milestone-bar"><div class="milestone-fill" data-role="ms-bar" style="width:0%"></div></div><span class="tabular" data-role="ms-mult">x1</span></div>` : ""}
+        <div class="upg-bottom">
+          <span class="upg-output tabular" data-role="eff"></span>
+          <button class="upg-buy-btn tabular" data-buy-${kind}="${item.id}">Kaufen</button>
+        </div>`;
+      card.querySelector(`[data-buy-${kind}="${item.id}"]`).addEventListener("click", () => { if (buyNormalUpgrade(kind, item.id)) updateUI(); });
+      return card;
+    }
+    function renderClickList() { const c = document.getElementById("click-upgrades-list"); c.innerHTML = ""; CLICK_UPGRADES.forEach(u => c.appendChild(buildUpgradeCard(u, "click"))); }
+    function renderMinerList() { const c = document.getElementById("miner-upgrades-list"); c.innerHTML = ""; MINERS.forEach(m => c.appendChild(buildUpgradeCard(m, "miner"))); }
+    function renderAllLists() { renderClickList(); renderMinerList(); }
+
+    function renderResearchModal() {
+      const box = document.getElementById("research-list"); box.innerHTML = "";
+      for (const r of RESEARCH_LIST) {
+        const owned = getLevel(state.researchOwned, r.id) > 0, unlocked = r.req(), can = !owned && unlocked && state.btc.gte(r.cost);
+        const card = document.createElement("div");
+        card.className = "upg-card" + (owned ? " done-card" : (can ? " can-afford" : ""));
+        card.innerHTML = `
+          <div class="upg-ident">
+            <div class="upg-icon" style="background:rgba(34,211,238,0.14);border-color:rgba(34,211,238,0.35);">${r.icon}</div>
+            <div><div class="upg-name">${r.name}</div><div class="upg-desc">${r.desc}</div></div>
+          </div>
+          <div class="upg-bottom">
+            <span class="upg-output">${owned ? "Erforscht" : (unlocked ? "Verfügbar" : "Gesperrt (Anforderung fehlt)")}</span>
+            <button class="upg-buy-btn tabular ${can ? "ready" : ""}" ${owned || !can ? "disabled" : ""}>${owned ? "✓ Aktiv" : formatBN(r.cost) + " BTC"}</button>
+          </div>`;
+        card.querySelector("button").addEventListener("click", () => buyResearch(r.id));
+        box.appendChild(card);
+      }
+    }
+
+    function renderAchievementsModal() {
+      const count = Object.keys(state.achievements).length;
+      document.getElementById("ach-bonus-summary").textContent = `${count} / ${ACHIEVEMENTS.length} (x${formatBN(getAchievementMult())})`;
+      document.getElementById("achievements-list").innerHTML = ACHIEVEMENTS.map(a => {
+        const got = !!state.achievements[a.id];
+        return `<div class="upg-card ${got ? "done-card" : ""}" style="opacity:${got ? 1 : 0.55}">
+          <div class="upg-ident">
+            <div class="upg-icon">${got ? a.icon : "🔒"}</div>
+            <div><div class="upg-name">${a.name}</div><div class="upg-desc">${a.desc}</div></div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderPrestigeModals() {
+      const renderShop = (containerId, list, kind, unit, poolKey, color) => {
+        const box = document.getElementById(containerId); box.innerHTML = "";
+        const map = kind === "rebirth" ? state.rebirthLevels : (kind === "ascension" ? state.ascensionLevels : state.transLevels);
+        for (const item of list) {
+          const lvl = getLevel(map, item.id), info = getUpgradeBuyInfo(item, lvl, false, poolKey);
+          const card = document.createElement("div"); card.className = "upg-card" + (info.canAfford ? " can-afford" : "");
+          card.innerHTML = `
+            <div class="upg-ident">
+              <div class="upg-icon" style="border-color:${color};">${item.icon}</div>
+              <div>
+                <div class="upg-name-row"><span class="upg-name">${item.name}</span><span class="upg-lvl tabular">Lv. ${lvl}${Number.isFinite(item.maxLevel) ? "/" + item.maxLevel : ""}</span></div>
+                <div class="upg-desc">${item.desc}</div>
+              </div>
+            </div>
+            <div class="upg-bottom">
+              <span class="upg-output tabular" style="color:${color};">${item.effectText(lvl)}</span>
+              <button class="upg-buy-btn tabular ${info.canAfford ? "ready" : ""}" ${info.maxed || !info.canAfford ? "disabled" : ""}>${info.maxed ? "MAX" : formatBN(info.cost, true) + " " + unit}</button>
+            </div>`;
+          card.querySelector("button").addEventListener("click", () => buyPrestigeUpgrade(kind, item.id));
+          box.appendChild(card);
+        }
+      };
+      renderShop("rebirth-shop-list", REBIRTH_SHOP, "rebirth", "RT", "rt", "var(--emerald-400)");
+      renderShop("ascension-shop-list", ASCENSION_SHOP, "ascension", "💎", "crystals", "var(--purple-400)");
+      renderShop("trans-shop-list", TRANS_SHOP, "trans", "⚛️", "genesis", "var(--cyan-400)");
+
+      const pendRT = getPendingRT();
+      document.getElementById("rebirth-current-rt").textContent = `Verfügbar: ${formatBN(state.rt, true)} RT`;
+      document.getElementById("rebirth-pending-info").textContent = `Bei Rebirth: +${formatBN(pendRT, true)} RT`;
+      document.getElementById("btn-do-rebirth").disabled = pendRT.lte(0);
+
+      const pendCr = getPendingCrystals();
+      document.getElementById("asc-crystals-owned").textContent = `${formatBN(state.crystals, true)} 💎`;
+      document.getElementById("asc-progress-text").textContent = `Fortschritt: ${formatBN(state.rt, true)} / 1.00 M RT`;
+      document.getElementById("asc-pending-info").textContent = `Bei Ascension: +${formatBN(pendCr, true)} 💎`;
+      document.getElementById("btn-do-ascension").disabled = state.rt.lt(1e6);
+
+      const pendGn = getPendingGenesis();
+      document.getElementById("trans-cores-owned").textContent = `${formatBN(state.genesis, true)} ⚛️`;
+      document.getElementById("trans-progress-text").textContent = `Fortschritt: ${formatBN(state.crystals, true)} / 100.00 K 💎`;
+      document.getElementById("trans-pending-info").textContent = `Bei Transzendenz: +${formatBN(pendGn, true)} ⚛️`;
+      document.getElementById("btn-do-transcend").disabled = state.crystals.lt(1e5);
+    }
+
+    function renderStatsModal() {
+      const bps = getTotalBps(), cpc = getClickPowerWithCombo(bps);
+      const items = [
+        ["Aktuelle BTC", formatBN(state.btc)], ["Run-BTC", formatBN(state.runBtc)], ["Lebenszeit-BTC", formatBN(state.lifetimeBtc)],
+        ["Aktuelle BPS", formatBN(bps) + " /s"], ["Klick-Kraft", formatBN(cpc)], ["Krit-Chance / Multi", `${(getCritChance() * 100).toFixed(1)}% / x${getCritMult().toFixed(2)}`],
+        ["Gesamte Klicks", state.totalClicks.toLocaleString("de-DE")], ["Kritische Treffer", state.totalCrits.toLocaleString("de-DE")], ["Goldene Bitcoins", state.goldenClicked.toLocaleString("de-DE")],
+        ["Rebirths / Tokens", `${state.rebirthCount} / ${formatBN(state.rt, true)} RT`], ["Ascensions / Kristalle", `${state.ascensionCount} / ${formatBN(state.crystals, true)} 💎`], ["Transzendenzen / Kerne", `${state.transcendCount} / ${formatBN(state.genesis, true)} ⚛️`],
+        ["Erfolge / Bonus", `${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length} (x${formatBN(getAchievementMult())})`], ["Erledigte Aufträge", state.missionsCompleted], ["Miner-Tiers", `${MINERS.length} Tiers (Endlos)`]
+      ];
+      document.getElementById("stats-grid").innerHTML = items.map(([k, v]) => `<div class="stat-cell"><span>${k}</span><strong class="tabular">${v}</strong></div>`).join("");
+    }
+
+    function updateUI() {
+      const bps = getTotalBps(), cpc = getClickPowerWithCombo(bps), comboMult = getComboMultiplier(), globalMult = getGlobalAllMultiplier();
+      document.getElementById("display-btc").textContent = `${formatBN(state.btc)} BTC`;
+      document.getElementById("display-bps").textContent = `${formatBN(bps)} /s`;
+      document.getElementById("display-cpc").textContent = `${formatBN(cpc)} BTC`;
+      document.getElementById("display-total-mult").textContent = `x${formatBN(globalMult.mul(comboMult))}`;
+      document.getElementById("click-upg-summary").textContent = `Krit: ${(getCritChance() * 100).toFixed(1)}% (x${getCritMult().toFixed(1)})`;
+      document.getElementById("combo-text").textContent = `x${comboMult.toFixed(2)} (Max x5.00)`;
+      document.getElementById("combo-fill").style.width = `${Math.min(100, state.comboValue).toFixed(1)}%`;
+
+      // Market & Sparkline
+      const mpEl = document.getElementById("market-price-text");
+      const up = market.mult >= 1.0;
+      mpEl.className = "market-price tabular " + (up ? "market-up" : "market-down");
+      mpEl.textContent = `$${Math.round(market.price).toLocaleString("en-US")} • x${market.mult.toFixed(2)}`;
+      const minP = Math.min(...market.history), maxP = Math.max(...market.history), span = Math.max(1, maxP - minP);
+      const pts = market.history.map((v, i) => `${(i / 23 * 88 + 1).toFixed(1)},${(24 - (v - minP) / span * 20).toFixed(1)}`).join(" ");
+      document.getElementById("market-sparkline").innerHTML = `<polyline fill="none" stroke="${up ? "#34d399" : "#fb7185"}" stroke-width="2" points="${pts}"/>`;
+
+      // Skills UI
+      const sk = state.skills;
+      const setSkill = (id, stId, active, cd, readyTxt) => {
+        const b = document.getElementById(id), s = document.getElementById(stId);
+        b.classList.toggle("active-skill", active > 0);
+        b.disabled = cd > 0;
+        s.textContent = active > 0 ? `Aktiv (${Math.ceil(active)}s)` : (cd > 0 ? `CD: ${Math.ceil(cd)}s` : readyTxt);
+      };
+      setSkill("skill-overclock", "skill-overclock-st", sk.ocActive, sk.ocCd, "Bereit (x3 • 30s)");
+      setSkill("skill-block", "skill-block-st", 0, sk.blkCd, "Bereit (3 Min BPS)");
+      setSkill("skill-combo", "skill-combo-st", sk.cmbActive, sk.cmbCd, "Bereit (5x • 20s)");
+
+      // Mission UI
+      const mLabels = { clicks: "Klicke auf Bitcoin", buys: "Kaufe Upgrades", crits: "Lande Kritische Klicks" };
+      document.getElementById("mission-text").textContent = `🎯 Auftrag #${state.mission.tier}: ${mLabels[state.mission.type]}`;
+      document.getElementById("mission-prog").textContent = `${state.mission.progress} / ${state.mission.target}`;
+
+      // Badges
+      const badges = [];
+      if (state.frenzyRemaining > 0) badges.push(`<span class="mult-pill frenzy tabular">🔥 7x FRENZY (${Math.ceil(state.frenzyRemaining)}s)</span>`);
+      if (state.totalRtInAsc.gt(0)) badges.push(`<span class="mult-pill rt tabular">♻️ RT x${formatBN(state.totalRtInAsc.mul(0.03).add(1))}</span>`);
+      if (getLevel(state.ascensionLevels, "a_singularity") > 0) badges.push(`<span class="mult-pill crystal tabular">💎 Sing x${formatBN(BN.from(12).pow(getLevel(state.ascensionLevels, "a_singularity")))}</span>`);
+      if (getLevel(state.transLevels, "g_cosmic_exp") > 0) badges.push(`<span class="mult-pill genesis tabular">⚛️ Kosmos x${formatBN(BN.from(1000).pow(getLevel(state.transLevels, "g_cosmic_exp")))}</span>`);
+      if (state.adminMult && state.adminMult.gt(1)) badges.push(`<span class="mult-pill admin tabular">⚡ Admin x${formatBN(state.adminMult)}</span>`);
+      document.getElementById("active-mult-badges").innerHTML = badges.join("");
+
+      document.getElementById("badge-rebirth").textContent = `+${formatBN(getPendingRT(), true)} RT`;
+      document.getElementById("badge-ascension").textContent = `${formatBN(state.crystals, true)} 💎`;
+      const availRes = RESEARCH_LIST.filter(r => !state.researchOwned[r.id] && r.req() && state.btc.gte(r.cost)).length;
+      document.getElementById("badge-research").textContent = `${availRes} neu`;
+      document.getElementById("badge-ach").textContent = `${Object.keys(state.achievements).length}/${ACHIEVEMENTS.length}`;
+
+      const autoBar = document.getElementById("automation-bar"), hasAB = getLevel(state.rebirthLevels, "r_autobuyer") > 0, hasAR = getLevel(state.ascensionLevels, "a_autorebirth") > 0, hasAA = getLevel(state.transLevels, "g_auto_asc") > 0;
+      const autoKey = `${hasAB}_${state.autoBuyerOn}_${hasAR}_${state.autoRebirthOn}_${hasAA}_${state.autoAscOn}`;
+      if (autoBar.dataset.key !== autoKey) {
+        autoBar.dataset.key = autoKey;
+        const p = [];
+        if (hasAB) p.push(`<button class="auto-pill ${state.autoBuyerOn ? "on" : ""}" id="toggle-autobuyer">🤖 Auto-Buy: ${state.autoBuyerOn ? "AN" : "AUS"}</button>`);
+        if (hasAR) p.push(`<div class="row-flex" style="gap:4px;"><button class="auto-pill ${state.autoRebirthOn ? "on" : ""}" id="toggle-autorebirth">⚡ Auto-Rebirth: ${state.autoRebirthOn ? "AN" : "AUS"}</button><input id="input-autorebirth-rt" class="input tabular" value="${state.autoRebirthTarget}" style="width:68px;padding:2px 6px;font-size:0.72rem;" /></div>`);
+        if (hasAA) p.push(`<button class="auto-pill ${state.autoAscOn ? "on" : ""}" id="toggle-autoasc">♾️ Auto-Asc: ${state.autoAscOn ? "AN" : "AUS"}</button>`);
+        if (!p.length) p.push(`<span>Tipp: Erreiche 1.00 B BTC für den ersten Rebirth &amp; Auto-Buyer!</span>`);
+        autoBar.innerHTML = p.join("");
+        const ab = document.getElementById("toggle-autobuyer"), ar = document.getElementById("toggle-autorebirth"), ari = document.getElementById("input-autorebirth-rt"), aa = document.getElementById("toggle-autoasc");
+        if (ab) ab.addEventListener("click", () => { state.autoBuyerOn = !state.autoBuyerOn; updateUI(); });
+        if (ar) ar.addEventListener("click", () => { state.autoRebirthOn = !state.autoRebirthOn; updateUI(); });
+        if (ari) ari.addEventListener("change", (e) => { state.autoRebirthTarget = e.target.value.trim() || "1000"; });
+        if (aa) aa.addEventListener("click", () => { state.autoAscOn = !state.autoAscOn; updateUI(); });
+      }
+
+      for (const u of CLICK_UPGRADES) {
+        const card = document.querySelector(`[data-click-card="${u.id}"]`); if (!card) continue;
+        const lvl = getLevel(state.clickLevels, u.id), info = getUpgradeBuyInfo(u, lvl, true), ms = getMilestoneMult(lvl);
+        card.classList.toggle("can-afford", !!info.canAfford);
+        card.querySelector('[data-role="lvl"]').textContent = `Lv. ${lvl}${Number.isFinite(u.maxLevel) ? "/" + u.maxLevel : ""}`;
+        card.querySelector('[data-role="eff"]').textContent = u.effectText(lvl, ms);
+        if (u.milestone) {
+          const prog = lvl % 25;
+          card.querySelector('[data-role="ms-text"]').textContent = `${prog}/25`;
+          card.querySelector('[data-role="ms-bar"]').style.width = `${(prog / 25) * 100}%`;
+          card.querySelector('[data-role="ms-mult"]').textContent = `x${formatBN(ms)}`;
+        }
+        const btn = card.querySelector(`[data-buy-click="${u.id}"]`);
+        btn.textContent = info.maxed ? "MAX" : ((info.count > 1 ? `(${info.count}x) ` : "") + formatBN(info.cost) + " BTC");
+        btn.disabled = info.maxed || !info.canAfford; btn.classList.toggle("ready", !info.maxed && !!info.canAfford);
+      }
+
+      const rebBpsMult = BN.from(1.75).pow(getLevel(state.rebirthLevels, "r_bps_mult")), modeMult = state.miningMode === "overclock" ? 1.45 : (state.miningMode === "sniper" ? 0.80 : 1.0);
+      for (const m of MINERS) {
+        const card = document.querySelector(`[data-miner-card="${m.id}"]`); if (!card) continue;
+        const lvl = getLevel(state.minerLevels, m.id), info = getUpgradeBuyInfo(m, lvl, true), ms = getMilestoneMult(lvl);
+        const out = (lvl > 0 ? getMinerBps(m, lvl) : m.baseBps.mul(getMinerTechMult(m.id))).mul(rebBpsMult).mul(modeMult).mul(globalMult);
+        card.classList.toggle("can-afford", !!info.canAfford);
+        card.querySelector('[data-role="lvl"]').textContent = `Lv. ${lvl}`;
+        card.querySelector('[data-role="eff"]').textContent = lvl > 0 ? `${formatBN(out)} /s` : `Basis: +${formatBN(out)} /s`;
+        const prog = lvl % 25;
+        card.querySelector('[data-role="ms-text"]').textContent = `${prog}/25`;
+        card.querySelector('[data-role="ms-bar"]').style.width = `${(prog / 25) * 100}%`;
+        card.querySelector('[data-role="ms-mult"]').textContent = `x${formatBN(ms)}`;
+        const btn = card.querySelector(`[data-buy-miner="${m.id}"]`);
+        btn.textContent = (info.count > 1 ? `(${info.count}x) ` : "") + formatBN(info.cost) + " BTC";
+        btn.disabled = !info.canAfford; btn.classList.toggle("ready", !!info.canAfford);
+      }
+    }
+
+    /* 15. GAME LOOP */
+    let lastTick = performance.now(), autoClickAccum = 0, autoBuyerAccum = 0, uiAccum = 0;
+    function gameLoop(now) {
+      const dt = Math.min(1.0, Math.max(0, (now - lastTick) / 1000)); lastTick = now;
+      updateMarket(dt);
+
+      const bps = getTotalBps();
+      if (!bps.isZero() && dt > 0) {
+        const earned = bps.mul(dt);
+        state.btc = state.btc.add(earned); state.runBtc = state.runBtc.add(earned); state.lifetimeBtc = state.lifetimeBtc.add(earned);
+      }
+      if (state.frenzyRemaining > 0) state.frenzyRemaining = Math.max(0, state.frenzyRemaining - dt);
+      state.skills.ocActive = Math.max(0, state.skills.ocActive - dt);
+      state.skills.ocCd = Math.max(0, state.skills.ocCd - dt);
+      state.skills.blkCd = Math.max(0, state.skills.blkCd - dt);
+      state.skills.cmbActive = Math.max(0, state.skills.cmbActive - dt);
+      state.skills.cmbCd = Math.max(0, state.skills.cmbCd - dt);
+
+      if (state.skills.cmbActive > 0) state.comboValue = 100;
+      else if (state.comboHoldTimer > 0) state.comboHoldTimer -= dt;
+      else if (state.comboValue > 0) state.comboValue = Math.max(0, state.comboValue - 26 * Math.pow(0.90, getLevel(state.clickLevels, "c_combo_dur")) * dt);
+
+      const autoRate = getLevel(state.clickLevels, "c_autoclick");
+      if (autoRate > 0) {
+        autoClickAccum += autoRate * dt;
+        const runs = Math.min(20, Math.floor(autoClickAccum));
+        if (runs > 0) { autoClickAccum -= runs; for (let i = 0; i < runs; i++) executeClick(0, 0, true); }
+      }
+
+      const abLvl = getLevel(state.rebirthLevels, "r_autobuyer");
+      if (abLvl > 0 && state.autoBuyerOn) {
+        autoBuyerAccum += dt;
+        if (autoBuyerAccum >= Math.max(0.10, 1.0 - abLvl * 0.075)) {
+          autoBuyerAccum = 0;
+          for (const m of MINERS) buyNormalUpgrade("miner", m.id);
+          for (const c of CLICK_UPGRADES) buyNormalUpgrade("click", c.id);
+          if (getLevel(state.rebirthLevels, "r_auto_res")) for (const r of RESEARCH_LIST) buyResearch(r.id);
+        }
+      }
+
+      if (getLevel(state.ascensionLevels, "a_autorebirth") > 0 && state.autoRebirthOn) {
+        if (getPendingRT().gte(BN.from(state.autoRebirthTarget).max(1))) performRebirth(true);
+      }
+      if (getLevel(state.transLevels, "g_auto_asc") > 0 && state.autoAscOn && state.rt.gte(1e7)) performAscension(true);
+
+      nextGoldenIn -= dt;
+      if (nextGoldenIn <= 0) { nextGoldenIn = getGoldenSpawnDelay(); spawnGoldenBitcoin(); }
+
+      uiAccum += dt;
+      if (uiAccum >= 0.066) { uiAccum = 0; checkDynamicTierExpansion(); checkAchievements(); updateUI(); }
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* 16. SAVE / LOAD / BASE64 / OFFLINE */
+    function computeChecksum(str) {
+      let h = 2166136261; const full = CHECKSUM_SALT + str;
+      for (let i = 0; i < full.length; i++) { h ^= full.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return (h >>> 0).toString(16).padStart(8, "0");
+    }
+    function serializeState() {
+      return {
+        version: 2, btc: state.btc.toJSON(), runBtc: state.runBtc.toJSON(), lifetimeBtc: state.lifetimeBtc.toJSON(),
+        rt: state.rt.toJSON(), totalRtInAsc: state.totalRtInAsc.toJSON(), crystals: state.crystals.toJSON(), genesis: state.genesis.toJSON(),
+        clickLevels: state.clickLevels, minerLevels: state.minerLevels, rebirthLevels: state.rebirthLevels,
+        ascensionLevels: state.ascensionLevels, transLevels: state.transLevels, researchOwned: state.researchOwned, achievements: state.achievements,
+        buyMode: state.buyMode, miningMode: state.miningMode, autoBuyerOn: state.autoBuyerOn, autoRebirthOn: state.autoRebirthOn,
+        autoRebirthTarget: state.autoRebirthTarget, autoAscOn: state.autoAscOn, adminMult: state.adminMult.toJSON(), audioOn: state.audioOn,
+        totalClicks: state.totalClicks, totalCrits: state.totalCrits, goldenClicked: state.goldenClicked,
+        rebirthCount: state.rebirthCount, ascensionCount: state.ascensionCount, transcendCount: state.transcendCount,
+        frenzyRemaining: state.frenzyRemaining, mission: state.mission, missionsCompleted: state.missionsCompleted,
+        lastSaveTime: Date.now(), createdAt: state.createdAt
+      };
+    }
+    function hydrateState(raw) {
+      if (!raw || typeof raw !== "object" || (raw.version !== 2 && raw.version !== 1)) return null;
+      const f = createFreshState();
+      f.btc = BN.fromJSON(raw.btc).max(0); f.runBtc = BN.fromJSON(raw.runBtc).max(0); f.lifetimeBtc = BN.fromJSON(raw.lifetimeBtc).max(0);
+      f.rt = BN.fromJSON(raw.rt).max(0); f.totalRtInAsc = BN.fromJSON(raw.totalRtInAsc).max(0); f.crystals = BN.fromJSON(raw.crystals).max(0);
+      if (raw.genesis) f.genesis = BN.fromJSON(raw.genesis).max(0);
+      f.clickLevels = raw.clickLevels || {}; f.minerLevels = raw.minerLevels || {};
+      f.rebirthLevels = raw.rebirthLevels || {}; f.ascensionLevels = raw.ascensionLevels || {};
+      f.transLevels = raw.transLevels || {}; f.researchOwned = raw.researchOwned || {}; f.achievements = raw.achievements || {};
+      f.buyMode = ["1", "10", "max"].includes(raw.buyMode) ? raw.buyMode : "1";
+      f.miningMode = ["balanced", "overclock", "sniper"].includes(raw.miningMode) ? raw.miningMode : "balanced";
+      f.autoBuyerOn = raw.autoBuyerOn !== false; f.autoRebirthOn = Boolean(raw.autoRebirthOn);
+      f.autoRebirthTarget = typeof raw.autoRebirthTarget === "string" ? raw.autoRebirthTarget : "1000";
+      f.autoAscOn = Boolean(raw.autoAscOn); f.adminMult = BN.fromJSON(raw.adminMult).max(1); f.audioOn = raw.audioOn !== false;
+      f.totalClicks = Number(raw.totalClicks) || 0; f.totalCrits = Number(raw.totalCrits) || 0; f.goldenClicked = Number(raw.goldenClicked) || 0;
+      f.rebirthCount = Number(raw.rebirthCount) || 0; f.ascensionCount = Number(raw.ascensionCount) || 0; f.transcendCount = Number(raw.transcendCount) || 0;
+      f.frenzyRemaining = Math.max(0, Number(raw.frenzyRemaining) || 0);
+      if (raw.mission && typeof raw.mission === "object") f.mission = raw.mission;
+      f.missionsCompleted = Number(raw.missionsCompleted) || 0;
+      f.lastSaveTime = Number(raw.lastSaveTime) || Date.now(); f.createdAt = Number(raw.createdAt) || Date.now();
+      let maxProc = -1;
+      for (const k of Object.keys(f.minerLevels)) if (k.startsWith("m_proc_")) { const i = parseInt(k.slice(7), 10); if (Number.isFinite(i) && i > maxProc) maxProc = i; }
+      if (maxProc >= 0) ensureProceduralMiners(HANDCRAFTED_MINERS.length + maxProc + 3);
+      return f;
+    }
+    function saveGame() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState())); } catch (_) {} }
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str); let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    }
+    function base64ToUtf8(b64) {
+      const bin = atob(b64.trim()), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    function generateExportString() { const data = JSON.stringify(serializeState()); return utf8ToBase64(JSON.stringify({ chk: computeChecksum(data), data })); }
+    function parseImportString(code) {
+      const env = JSON.parse(base64ToUtf8(code));
+      if (!env || typeof env.data !== "string" || typeof env.chk !== "string") throw new Error("Ungültiges Format");
+      if (computeChecksum(env.data) !== env.chk) throw new Error("Checksumme ungültig");
+      const hydrated = hydrateState(JSON.parse(env.data));
+      if (!hydrated) throw new Error("Ungültige Spielstandsdaten");
+      return hydrated;
+    }
+    function formatDuration(sec) {
+      sec = Math.floor(sec);
+      const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      return [d && `${d}d`, h && `${h}h`, m && `${m}m`, `${s}s`].filter(Boolean).join(" ");
+    }
+
+    /* 17. PANIC-MODUS & MENÜ */
+    function loadPanicSettings() {
+      try {
+        const raw = localStorage.getItem(PANIC_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          panicSettings = { imageData: p.imageData || "", imageUrl: p.imageUrl || "", fit: p.fit === "contain" ? "contain" : "cover", tabTitle: p.tabTitle || DEFAULT_PANIC_TITLE };
+        }
+      } catch (_) {}
+      applyPanicVisuals();
+    }
+    function savePanicSettings() { try { localStorage.setItem(PANIC_KEY, JSON.stringify(panicSettings)); return true; } catch (_) { return false; } }
+    const getActivePanicImageSrc = () => panicSettings.imageData || panicSettings.imageUrl || DEFAULT_PANIC_SVG;
+    function applyPanicVisuals() {
+      const src = getActivePanicImageSrc();
+      ["panic-img", "panic-preview-img"].forEach(id => { const el = document.getElementById(id); el.src = src; el.style.objectFit = panicSettings.fit; });
+    }
+    function syncPanicMenuUI() {
+      document.getElementById("panic-url-input").value = panicSettings.imageUrl || "";
+      document.getElementById("panic-fit-select").value = panicSettings.fit;
+      document.getElementById("panic-title-input").value = panicSettings.tabTitle || DEFAULT_PANIC_TITLE;
+      applyPanicVisuals();
+    }
+    function togglePanicMode(force = null) {
+      const next = force === null ? !isPanicActive : force;
+      if (next === isPanicActive) return;
+      isPanicActive = next;
+      const appEl = document.getElementById("app"), ovEl = document.getElementById("panic-overlay"), btn = document.getElementById("panic-btn");
+      if (isPanicActive) {
+        Sound.setPanicMute(true); applyPanicVisuals();
+        appEl.classList.add("hidden-panic"); btn.style.display = "none";
+        ovEl.classList.add("active"); ovEl.setAttribute("aria-hidden", "false");
+        document.title = panicSettings.tabTitle || DEFAULT_PANIC_TITLE;
+      } else {
+        ovEl.classList.remove("active"); ovEl.setAttribute("aria-hidden", "true");
+        appEl.classList.remove("hidden-panic"); btn.style.display = "flex";
+        document.title = originalTitle; Sound.setPanicMute(false);
+      }
+    }
+    document.getElementById("panic-btn").addEventListener("click", () => togglePanicMode(true));
+    document.getElementById("panic-exit-zone").addEventListener("click", () => togglePanicMode(false));
+    window.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); togglePanicMode(); } });
+
+    document.getElementById("panic-file-input").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0]; if (!file) return;
+      const infoEl = document.getElementById("panic-upload-info"), reader = new FileReader();
+      reader.onload = () => {
+        const rawData = reader.result; if (typeof rawData !== "string") return;
+        const finishSave = (data, compressed) => {
+          panicSettings.imageData = data; panicSettings.imageUrl = "";
+          if (savePanicSettings()) {
+            infoEl.textContent = compressed ? "Großes Bild automatisch komprimiert & lokal gespeichert." : "Eigenes Bild erfolgreich gespeichert.";
+            infoEl.className = "msg-ok";
+          } else { infoEl.textContent = "Speicherlimit erreicht – bitte kleinere Datei wählen."; infoEl.className = "msg-err"; }
+          applyPanicVisuals();
+        };
+        if (rawData.length <= 900000) return finishSave(rawData, false);
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, 1920 / img.width), cv = document.createElement("canvas");
+          cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+          cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+          finishSave(cv.toDataURL("image/jpeg", 0.8), true);
+        };
+        img.src = rawData;
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("btn-panic-url-apply").addEventListener("click", () => {
+      const url = document.getElementById("panic-url-input").value.trim(); if (!url) return;
+      panicSettings.imageUrl = url; panicSettings.imageData = ""; savePanicSettings(); applyPanicVisuals(); showToast("Panic-Bild-URL übernommen.");
+    });
+    document.getElementById("panic-fit-select").addEventListener("change", (e) => { panicSettings.fit = e.target.value === "contain" ? "contain" : "cover"; savePanicSettings(); applyPanicVisuals(); });
+    document.getElementById("panic-title-input").addEventListener("input", (e) => { panicSettings.tabTitle = e.target.value || DEFAULT_PANIC_TITLE; savePanicSettings(); });
+    document.getElementById("btn-panic-reset").addEventListener("click", () => {
+      panicSettings.imageData = ""; panicSettings.imageUrl = ""; panicSettings.tabTitle = DEFAULT_PANIC_TITLE;
+      document.getElementById("panic-file-input").value = ""; savePanicSettings(); syncPanicMenuUI(); showToast("Standard-Fake-Bild wiederhergestellt.");
+    });
+
+    /* 18. ADMIN-BEREICH */
+    function setAdminUnlocked(unlocked) {
+      isAdminUnlocked = unlocked;
+      document.getElementById("admin-locked-view").style.display = unlocked ? "none" : "block";
+      document.getElementById("admin-unlocked-view").style.display = unlocked ? "flex" : "none";
+      const badge = document.getElementById("admin-lock-badge");
+      badge.textContent = unlocked ? "Entsperrt" : "Gesperrt";
+      badge.style.color = unlocked ? "var(--emerald-400)" : "var(--text-muted)";
+      document.getElementById("admin-auth-msg").textContent = "";
+      if (unlocked) document.getElementById("adm-mult-val").value = state.adminMult.toNumber() < 1e6 ? String(state.adminMult.toNumber()) : `${state.adminMult.m.toFixed(2)}e${state.adminMult.e}`;
+    }
+    function attemptAdminUnlock() {
+      const input = document.getElementById("admin-code-input"), msg = document.getElementById("admin-auth-msg");
+      if (verifySecretHash(input.value)) { input.value = ""; setAdminUnlocked(true); }
+      else { msg.textContent = "Ungültiger Zugangscode."; msg.className = "msg-err"; }
+    }
+    document.getElementById("btn-admin-unlock").addEventListener("click", attemptAdminUnlock);
+    document.getElementById("admin-code-input").addEventListener("keydown", (e) => { if (e.key === "Enter") attemptAdminUnlock(); });
+    document.getElementById("btn-admin-lock").addEventListener("click", () => setAdminUnlocked(false));
+
+    document.getElementById("adm-btc-add").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-btc-val").value).max(0); state.btc = state.btc.add(v); state.runBtc = state.runBtc.add(v); state.lifetimeBtc = state.lifetimeBtc.add(v); updateUI(); showToast(`Admin: +${formatBN(v)} BTC`); });
+    document.getElementById("adm-btc-set").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-btc-val").value).max(0); state.btc = v; state.runBtc = state.runBtc.max(v); state.lifetimeBtc = state.lifetimeBtc.max(v); updateUI(); showToast(`Admin: BTC = ${formatBN(v)}`); });
+    document.getElementById("adm-rt-add").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-rt-val").value).max(0).floor(); state.rt = state.rt.add(v); state.totalRtInAsc = state.totalRtInAsc.add(v); updateUI(); showToast(`Admin: +${formatBN(v, true)} RT`); });
+    document.getElementById("adm-rt-set").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-rt-val").value).max(0).floor(); state.rt = v; state.totalRtInAsc = state.totalRtInAsc.max(v); updateUI(); showToast(`Admin: RT = ${formatBN(v, true)}`); });
+    document.getElementById("adm-cr-add").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-cr-val").value).max(0).floor(); state.crystals = state.crystals.add(v); updateUI(); showToast(`Admin: +${formatBN(v, true)} 💎`); });
+    document.getElementById("adm-cr-set").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-cr-val").value).max(0).floor(); state.crystals = v; updateUI(); showToast(`Admin: Kristalle = ${formatBN(v, true)}`); });
+    document.getElementById("adm-gn-add").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-gn-val").value).max(0).floor(); state.genesis = state.genesis.add(v); updateUI(); showToast(`Admin: +${formatBN(v, true)} ⚛️`); });
+    document.getElementById("adm-gn-set").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-gn-val").value).max(0).floor(); state.genesis = v; updateUI(); showToast(`Admin: Kerne = ${formatBN(v, true)}`); });
+    document.getElementById("adm-mult-apply").addEventListener("click", () => { const v = BN.from(document.getElementById("adm-mult-val").value).max(1); state.adminMult = v; updateUI(); showToast(`Admin: Multiplikator x${formatBN(v)}`); });
+    document.getElementById("adm-spawn-golden").addEventListener("click", () => { spawnGoldenBitcoin(); showToast("Admin: Goldener Bitcoin gespawnt!"); });
+    document.getElementById("adm-trigger-frenzy").addEventListener("click", () => { state.frenzyRemaining = 60; Sound.frenzy(); updateUI(); showToast("Admin: 7x Frenzy aktiviert!"); });
+    document.getElementById("adm-unlock-auto").addEventListener("click", () => {
+      state.rebirthLevels.r_autobuyer = Math.max(12, getLevel(state.rebirthLevels, "r_autobuyer"));
+      state.rebirthLevels.r_auto_res = 1; state.ascensionLevels.a_autorebirth = 1; state.transLevels.g_auto_asc = 1;
+      state.autoBuyerOn = true; RESEARCH_LIST.forEach(r => { state.researchOwned[r.id] = 1; });
+      updateUI(); showToast("Admin: Alle Auto-Systeme & Forschungen freigeschaltet!");
+    });
+    document.getElementById("adm-hard-reset").addEventListener("click", () => {
+      if (!confirm("Wirklich den kompletten Spielstand unwiderruflich zurücksetzen?")) return;
+      localStorage.removeItem(SAVE_KEY); state = createFreshState(); renderAllLists(); updateUI(); saveGame(); closeModal("modal-menu"); showToast("Spielstand komplett zurückgesetzt.");
+    });
+
+    /* 19. UI-EVENTS & BOOTSTRAP */
+    document.getElementById("btn-open-rebirth").addEventListener("click", () => openModal("modal-rebirth"));
+    document.getElementById("btn-open-ascension").addEventListener("click", () => openModal("modal-ascension"));
+    document.getElementById("btn-open-research").addEventListener("click", () => openModal("modal-research"));
+    document.getElementById("btn-open-achievements").addEventListener("click", () => openModal("modal-achievements"));
+    document.getElementById("btn-open-stats").addEventListener("click", () => openModal("modal-stats"));
+    document.getElementById("btn-open-save").addEventListener("click", () => openModal("modal-save"));
+    document.getElementById("btn-open-menu").addEventListener("click", () => openModal("modal-menu"));
+    document.getElementById("btn-do-rebirth").addEventListener("click", () => performRebirth(false));
+    document.getElementById("btn-do-ascension").addEventListener("click", () => performAscension(false));
+    document.getElementById("btn-do-transcend").addEventListener("click", () => performTranscend());
+
+    document.getElementById("tab-btn-asc").addEventListener("click", () => {
+      document.getElementById("prestige-tab-asc").style.display = "flex";
+      document.getElementById("prestige-tab-trans").style.display = "none";
+    });
+    document.getElementById("tab-btn-trans").addEventListener("click", () => {
+      document.getElementById("prestige-tab-asc").style.display = "none";
+      document.getElementById("prestige-tab-trans").style.display = "flex";
+    });
+
+    document.getElementById("btn-toggle-audio").addEventListener("click", () => {
+      state.audioOn = !state.audioOn; Sound.enabled = state.audioOn;
+      document.getElementById("btn-toggle-audio").textContent = state.audioOn ? "🔊 Audio" : "🔇 Stumm";
+      if (state.audioOn) Sound.buy();
+      saveGame();
+    });
+
+    document.querySelectorAll("#mining-mode-btns button").forEach(btn => btn.addEventListener("click", () => {
+      state.miningMode = btn.dataset.mm;
+      document.querySelectorAll("#mining-mode-btns button").forEach(b => b.classList.toggle("active", b === btn));
+      updateUI();
+    }));
+    document.querySelectorAll("#buy-mode-toggle button").forEach(btn => btn.addEventListener("click", () => {
+      state.buyMode = btn.dataset.mode;
+      document.querySelectorAll("#buy-mode-toggle button").forEach(b => b.classList.toggle("active", b === btn));
+      updateUI();
+    }));
+    document.querySelectorAll(".mobile-tab").forEach(tab => tab.addEventListener("click", () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll(".mobile-tab").forEach(t => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".panel[data-col]").forEach(p => p.classList.toggle("mobile-active", p.dataset.col === target));
+    }));
+
+    document.getElementById("btn-export-copy").addEventListener("click", async () => {
+      const code = generateExportString(), ta = document.getElementById("save-export-text"), st = document.getElementById("save-export-status");
+      ta.value = code;
+      try { await navigator.clipboard.writeText(code); st.textContent = "In die Zwischenablage kopiert!"; }
+      catch (_) { ta.select(); document.execCommand("copy"); st.textContent = "Code generiert & markiert!"; }
+    });
+    document.getElementById("btn-import-load").addEventListener("click", () => {
+      const code = document.getElementById("save-import-text").value.trim(), st = document.getElementById("save-import-status");
+      if (!code) { st.textContent = "Bitte zuerst einen Base64-Code einfügen."; st.className = "msg-err"; return; }
+      try {
+        state = parseImportString(code); checkDynamicTierExpansion();
+        Sound.enabled = state.audioOn;
+        document.getElementById("btn-toggle-audio").textContent = state.audioOn ? "🔊 Audio" : "🔇 Stumm";
+        document.querySelectorAll("#buy-mode-toggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === state.buyMode));
+        document.querySelectorAll("#mining-mode-btns button").forEach(b => b.classList.toggle("active", b.dataset.mm === state.miningMode));
+        renderAllLists(); updateUI(); saveGame();
+        st.textContent = "Spielstand erfolgreich geladen!"; st.className = "msg-ok"; showToast("Spielstand per Base64 importiert!");
+      } catch (err) {
+        st.textContent = "Ungültiger oder beschädigter Save-Code (" + err.message + ")."; st.className = "msg-err";
+      }
+    });
+
+    function bootstrap() {
+      initBaseMiners(); state = createFreshState(); loadPanicSettings();
+      try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const p = hydrateState(JSON.parse(raw)); if (p) state = p; } } catch (_) {}
+      checkDynamicTierExpansion();
+      Sound.enabled = state.audioOn;
+      document.getElementById("btn-toggle-audio").textContent = state.audioOn ? "🔊 Audio" : "🔇 Stumm";
+      document.querySelectorAll("#buy-mode-toggle button").forEach(b => b.classList.toggle("active", b.dataset.mode === state.buyMode));
+      document.querySelectorAll("#mining-mode-btns button").forEach(b => b.classList.toggle("active", b.dataset.mm === state.miningMode));
+      renderAllLists();
+
+      const elapsed = Math.max(0, (Date.now() - state.lastSaveTime) / 1000), bps = getTotalBps();
+      const offEff = getLevel(state.researchOwned, "t_offline_2") ? 1.2 : (getLevel(state.researchOwned, "t_offline_1") ? 0.8 : 0.5);
+      if (elapsed >= 10 && bps.gt(0)) {
+        const earned = bps.mul(elapsed).mul(offEff);
+        state.btc = state.btc.add(earned); state.runBtc = state.runBtc.add(earned); state.lifetimeBtc = state.lifetimeBtc.add(earned);
+        document.getElementById("offline-time-text").textContent = formatDuration(elapsed);
+        document.getElementById("offline-eff-text").textContent = `${Math.round(offEff * 100)}%`;
+        document.getElementById("offline-earned-text").textContent = `+${formatBN(earned)} BTC`;
+        openModal("modal-offline");
+      }
+      updateUI();
+      setInterval(saveGame, 5000);
+      window.addEventListener("beforeunload", saveGame);
+      requestAnimationFrame(gameLoop);
+    }
+    bootstrap();
+  })();
+  </script>
+</body>
+</html>
